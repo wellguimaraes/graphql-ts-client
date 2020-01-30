@@ -2,6 +2,15 @@
 
 Generate fully typed Typescript clients for your GraphQL APIs.
 
+## Install
+```
+yarn add graphql-ts-client
+```
+or
+```
+npm i graphql-ts-client
+```
+
 ## Usage
 
 ### Generate the client
