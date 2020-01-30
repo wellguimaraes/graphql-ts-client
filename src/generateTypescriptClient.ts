@@ -1,6 +1,6 @@
+import fs, { PathLike } from 'fs'
 import { introspectionQuery, IntrospectionQuery } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
-import { set } from 'lodash'
 import { Options } from 'graphql-request/dist/src/types'
 import {
   IntrospectionEnumType,
@@ -10,8 +10,7 @@ import {
   IntrospectionObjectType,
   IntrospectionOutputTypeRef,
 } from 'graphql/utilities/introspectionQuery'
-import fs, { PathLike } from 'fs'
-import path from 'path'
+import { set } from 'lodash'
 import * as prettier from 'prettier'
 
 enum Scalars {
@@ -21,8 +20,6 @@ enum Scalars {
   UUID = 'UUID',
   string = 'string',
 }
-
-const jsonToGraphQLQueryCode = fs.readFileSync(path.resolve(__dirname, './jsonToGraphQLQuery.ts'), { encoding: 'utf8' })
 
 function gqlScalarToTypescript(gqlType: string) {
   if (/(int|long|double|decimal)/i.test(gqlType)) return 'number'
