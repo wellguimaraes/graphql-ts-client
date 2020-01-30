@@ -280,7 +280,7 @@ export async function generateTypescriptClient({
     let _client = new GraphQLClient('${endpoint}')
     
     function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string) {
-      return async (jsonQuery?: I): Promise<Projection<I, O>> => {
+      return async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
         // noinspection TypeScriptUnresolvedVariable
         const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
         const response = await _client.request(query, variables)
