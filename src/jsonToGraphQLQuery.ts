@@ -1,3 +1,6 @@
+const VAR_PREFIX = '@@VAR@@'
+const VAR_PREFIX_LENGTH = VAR_PREFIX.length
+
 export function jsonToGraphQLQuery({
   kind,
   name,
@@ -32,17 +35,17 @@ export function jsonToGraphQLQuery({
 function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any; variables: any; parentType: any }) {
   if (jsonQuery.__args) {
     Object.keys(jsonQuery.__args).forEach(k => {
+      if (typeof jsonQuery.__args[k] === 'string' && jsonQuery.__args[k].startsWith(VAR_PREFIX)) return
+
       const variableName = `${k}_${Math.random()
         .toString(36)
         .substr(2, 4)}`
-
-      if (typeof jsonQuery.__args[k] === 'string' && jsonQuery.__args[k].startsWith('$')) return
 
       variables[variableName] = {
         type: parentType.__args[k],
         value: jsonQuery.__args[k],
       }
-      jsonQuery.__args[k] = `$${variableName}`
+      jsonQuery.__args[k] = `${VAR_PREFIX}$${variableName}`
     })
   }
 
@@ -65,7 +68,7 @@ function toGraphql(jsonQuery: any) {
 
   const args = jsonQuery.__args
     ? `(${Object.entries(jsonQuery.__args)
-        .map(([k, v]) => `${k}:${v}`)
+        .map(([k, v]: any) => `${k}:${v.substr(VAR_PREFIX_LENGTH)}`)
         .join(',')})`
     : ''
 

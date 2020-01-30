@@ -267,7 +267,6 @@ export async function generateTypescriptClient({
     type UUID = string
     type IDate = Date | string
     type Maybe<T> = null | undefined | T
-    
     type Projection<S, B> = {
       [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : Projection<S[k], B[k]>
     }
@@ -292,8 +291,12 @@ export async function generateTypescriptClient({
       setClient(url: string, options?: Options) {
         _client = new GraphQLClient(url, options)
       },
-      setHeader: _client.setHeader,
-      setHeaders: _client.setHeaders,
+      setHeader(key: string, value: string) {
+        _client.setHeader(key, value)
+      },
+      setHeaders(headers: { [k: string]: string }) {
+        _client.setHeaders(headers)
+      },
       queries: {
         ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
       },
