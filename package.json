@@ -1,0 +1,32 @@
+{
+  "name": "graphql-ts-client",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "yarn build",
+    "test": "echo \"no test specified\""
+  },
+  "author": "Wellington Guimaraes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wellguimaraes/actionware/issues"
+  },
+  "homepage": "https://github.com/wellguimaraes/actionware#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wellguimaraes/graphql-ts-client.git"
+  },
+  "dependencies": {
+    "@types/graphql": "^14.5.0",
+    "@types/lodash": "^4.14.149",
+    "@types/node": "^13.5.0",
+    "@types/prettier": "^1.19.0",
+    "graphql": "^14.6.0",
+    "graphql-request": "^1.8.2",
+    "lodash": "^4.17.15",
+    "prettier": "^1.19.1",
+    "typescript": "^3.7.5"
+  }
+}
