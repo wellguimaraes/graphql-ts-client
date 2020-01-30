@@ -262,49 +262,48 @@ export async function generateTypescriptClient({
 
   //language=TypeScript
   const clientCode = `
-import { GraphQLClient } from 'graphql-request'
-import { Options } from 'graphql-request/dist/src/types'
-// noinspection TypeScriptCheckImport
-import { jsonToGraphQLQuery } from 'graphql-ts-client'
-
-type UUID = string
-type IDate = Date | string
-type Maybe<T> = null | undefined | T
-
-type Projection<S, B> = {
-  [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : Projection<S[k], B[k]>
-}
-
-${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
-${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
-${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
-${extractInputTypes(forInputExtraction)}
-
-let _client = new GraphQLClient('${endpoint}')
-
-function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string) {
-  return async (jsonQuery?: I): Promise<Projection<I, O>> => {
-    // noinspection TypeScriptUnresolvedVariable
-    const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
-    const response = await _client.request(query, variables)
-    return response[name]
-  }
-}
-
-export default {
-  setClient(url: string, options?: Options) {
-    _client = new GraphQLClient(url, options)
-  },
-  setHeader: _client.setHeader,
-  setHeaders: _client.setHeaders,
-  queries: {
-    ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
-  },
-  mutations: {
-    ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
-  }
-}
-`.trim()
+    import { GraphQLClient } from 'graphql-request'
+    import { Options } from 'graphql-request/dist/src/types'
+    // noinspection TypeScriptCheckImport
+    import { jsonToGraphQLQuery } from 'graphql-ts-client'
+    
+    type UUID = string
+    type IDate = Date | string
+    type Maybe<T> = null | undefined | T
+    
+    type Projection<S, B> = {
+      [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : Projection<S[k], B[k]>
+    }
+    
+    ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
+    ${extractInputTypes(forInputExtraction)}
+    
+    let _client = new GraphQLClient('${endpoint}')
+    
+    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string) {
+      return async (jsonQuery?: I): Promise<Projection<I, O>> => {
+        // noinspection TypeScriptUnresolvedVariable
+        const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
+        const response = await _client.request(query, variables)
+        return response[name]
+      }
+    }
+    
+    export default {
+      setClient(url: string, options?: Options) {
+        _client = new GraphQLClient(url, options)
+      },
+      setHeader: _client.setHeader,
+      setHeaders: _client.setHeaders,
+      queries: {
+        ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
+      },
+      mutations: {
+        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
+      }
+    }`
 
   const formattedClientCode = prettier.format(clientCode, { semi: false, parser: 'typescript' })
 
