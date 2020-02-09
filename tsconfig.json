@@ -3,7 +3,7 @@
     "target": "es5",
     "module": "commonjs",
     "lib": ["ES2020", "DOM"],
-    "outDir": "lib",
+    "outDir": "dist",
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
