@@ -33,6 +33,9 @@ export function jsonToGraphQLQuery({
 }
 
 function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any; variables: any; parentType: any }) {
+  if (!parentType)
+    return
+
   if (jsonQuery.__args) {
     Object.keys(jsonQuery.__args).forEach(k => {
       if (typeof jsonQuery.__args[k] === 'string' && jsonQuery.__args[k].startsWith(VAR_PREFIX)) return
@@ -55,7 +58,7 @@ function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any
       extractVariables({
         jsonQuery: jsonQuery[k],
         variables,
-        parentType: parentType[k],
+        parentType: parentType.hasOwnProperty(k) ? parentType[k] : parentType.__fields[k],
       })
     )
 }

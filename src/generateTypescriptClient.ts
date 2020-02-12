@@ -12,6 +12,7 @@ import {
 } from 'graphql/utilities/introspectionQuery'
 import { set } from 'lodash'
 import * as prettier from 'prettier'
+import Case from 'case'
 
 enum Scalars {
   number = 'number',
@@ -30,6 +31,7 @@ function gqlScalarToTypescript(gqlType: string) {
   return 'string'
 }
 
+// TODO: separate in two: input and output types
 function gqlTypeToTypescript(
   gqlType: IntrospectionOutputTypeRef,
   { required = false, isInput = false, selection = false } = {}
@@ -55,7 +57,7 @@ function gqlTypeToTypescript(
         isInput,
         required: true,
         selection,
-      })}${isInput ? '[]' : ''}`
+      })}${selection ? '' : '[]'}`
     )
 
   if (selection) return ''
@@ -103,7 +105,7 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', it: IntrospectionFi
   const outputType = gqlTypeToTypescript(it.type)
   const inputType = selectionType || 'undefined'
 
-  return `${it.name}: apiEndpoint<${inputType}, ${outputType}>('${kind}', '${it.name}')`
+  return `${it.name}: apiEndpoint<${inputType}, DeepRequired<${outputType}>>('${kind}', '${it.name}')`
 }
 
 function gqlSchemaToTypescript(
@@ -114,41 +116,57 @@ function gqlSchemaToTypescript(
 
   if (rawKind === 'ENUM')
     return `
-export enum ${it.name} {
-  ${it.enumValues.map((_: any) => `${_.name} = '${_.name}'`).join(',\n  ')}
-}`
+      export enum ${it.name} {
+        ${it.enumValues.map((_: any) => `${Case.camel(_.name)} = '${_.name}'`).join(',\n  ')}
+      }`
 
   const fields = (it.fields && it.fields) || (it.inputFields && it.inputFields) || []
 
   return `
-interface ${it.name}${selection ? 'Selection' : ''} {
-  ${fields
-    .map((_: any) =>
-      gqlFieldToTypescript(_, {
-        isInput: it.kind === 'INPUT_OBJECT',
-        selection,
-      })
-    )
-    .join(',\n  ')}
-}`
+    export interface ${it.name}${selection ? 'Selection' : ''} {
+      ${fields
+        .map((_: any) =>
+          gqlFieldToTypescript(_, {
+            isInput: it.kind === 'INPUT_OBJECT',
+            selection,
+          })
+        )
+        .join(',\n  ')}
+    }`
 }
 
 function getGraphQLInputType(type: IntrospectionInputTypeRef): string {
-  if (type.kind === 'NON_NULL') return `${getGraphQLInputType(type.ofType)}!`
+  switch (type.kind) {
+    case 'NON_NULL':
+      return `${getGraphQLInputType(type.ofType)}!`
 
-  if (type.kind === 'SCALAR' || type.kind === 'INPUT_OBJECT' || type.kind === 'ENUM') return type.name
+    case 'SCALAR':
+    case 'INPUT_OBJECT':
+    case 'ENUM':
+      return type.name
 
-  if (type.kind === 'LIST') return `[${getGraphQLInputType(type.ofType)}]`
+    case 'LIST':
+      return `[${getGraphQLInputType(type.ofType)}]`
 
-  return ''
+    default:
+      return ''
+  }
 }
 
 function getGraphQLOutputType(type: IntrospectionOutputTypeRef): string {
-  if (type.kind === 'NON_NULL' || type.kind === 'LIST') return getGraphQLOutputType(type.ofType)
+  switch (type.kind) {
+    case 'LIST':
+      return `${getGraphQLOutputType(type.ofType)}[]`
 
-  if (type.kind === 'OBJECT') return type.name
+    case 'NON_NULL':
+      return getGraphQLOutputType(type.ofType)
 
-  return ''
+    case 'OBJECT':
+      return type.name
+
+    default:
+      return ''
+  }
 }
 
 function extractInputTypes(types: IntrospectionObjectType[]) {
@@ -196,42 +214,46 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
     return removed > 0
   }
 
+  // noinspection StatementWithEmptyBodyJS
   while (cleanTree());
 
-  const outputTypesTreeCode = `
-  const typesTree = {
-    ${Object.entries(outputTypesTree)
-      .map(([key, value]) => {
-        let valueCode = Object.entries(value as any)
-          .map(
-            ([k, v]: any) =>
-              `get ${k}(): any {
-                return {
-                  ${v.__shape && outputTypesTree.hasOwnProperty(v.__shape) ? `...typesTree.${v.__shape},` : ''}
-                  ${
-                    v.__args
-                      ? `__args: {
-                    ${Object.entries(v.__args)
-                      .map(([k, v]) => `${k}: '${v}'`)
-                      .join(',\n')}
-                  }`
-                      : ''
-                  }
-                }
-              }`
-          )
-          .join(',\n')
-          .trim()
-
-        return `${key}: {
-        ${valueCode}
-      }`
-      })
-      .join(',\n')}
-  }
+  return `
+    const typesTree = {
+      ${Object.entries(outputTypesTree)
+        .map(
+          ([key, value]) => `
+            ${key}: { 
+              ${Object.entries(value as any)
+                .map(
+                  ([k, v]: any) => `
+                    get ${k}(): any {
+                      return {
+                        ${
+                          v.__shape && outputTypesTree.hasOwnProperty(v.__shape)
+                            ? `
+                            __fields: typesTree.${v.__shape},`
+                            : ''
+                        }
+                        ${
+                          v.__args
+                            ? `
+                            __args: {
+                              ${Object.entries(v.__args)
+                                .map(([k, v]) => `${k}: '${v}'`)
+                                .join(',\n')}
+                            }`
+                            : ''
+                        }
+                      }
+                    }`
+                )
+                .join(',\n')
+                .trim()} 
+            }`
+        )
+        .join(',\n')}
+    }
   `
-
-  return outputTypesTreeCode
 }
 
 export async function generateTypescriptClient({
@@ -257,27 +279,26 @@ export async function generateTypescriptClient({
     it => !it.name.startsWith('__') && ['OBJECT'].includes(it.kind)
   ) as IntrospectionObjectType[]
 
-  //language=TypeScript
   const clientCode = `
     import { GraphQLClient } from 'graphql-request'
     import { Options } from 'graphql-request/dist/src/types'
-    // noinspection TypeScriptCheckImport
     import { jsonToGraphQLQuery } from 'graphql-ts-client'
-    
-    type UUID = string
-    type IDate = Date | string
-    type Maybe<T> = null | undefined | T
-    type Projection<S, B> = {
-      [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : Projection<S[k], B[k]>
+    import { DeepRequired } from 'ts-essentials'
+
+    export type UUID = string
+    export type IDate = Date | string
+    export type Maybe<T> = null | undefined | T
+    export type Projection<S, B> = {
+      [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : B[k] extends Array<infer A> ? Projection<S[k], A>[] : Projection<S[k], B[k]>
     }
-    
+
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
     ${extractInputTypes(forInputExtraction)}
-    
+
     let _client = new GraphQLClient('${endpoint}')
-    
+
     function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string) {
       return async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
         // noinspection TypeScriptUnresolvedVariable
@@ -286,17 +307,11 @@ export async function generateTypescriptClient({
         return response[name]
       }
     }
-    
+
     export default {
-      setClient(url: string, options?: Options) {
-        _client = new GraphQLClient(url, options)
-      },
-      setHeader(key: string, value: string) {
-        _client.setHeader(key, value)
-      },
-      setHeaders(headers: { [k: string]: string }) {
-        _client.setHeaders(headers)
-      },
+      setClient: (url: string, options?: Options) => { _client = new GraphQLClient(url, options) },
+      setHeader: (key: string, value: string) => { _client.setHeader(key, value) },
+      setHeaders: (headers: { [k: string]: string }) => { _client.setHeaders(headers) },
       queries: {
         ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
       },
