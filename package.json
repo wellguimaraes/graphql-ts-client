@@ -1,12 +1,11 @@
 {
   "name": "graphql-ts-client",
-  "version": "0.0.20",
+  "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "prepublish": "yarn build",
     "test": "echo \"no test specified\""
   },
   "author": "Wellington Guimaraes",
@@ -24,6 +23,7 @@
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.5.0",
     "@types/prettier": "^1.19.0",
+    "case": "^1.6.2",
     "graphql": "^14.6.0",
     "graphql-request": "^1.8.2",
     "graphql-ts-client": "^0.0.17",
