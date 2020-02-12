@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,6 +26,7 @@
     "@types/prettier": "^1.19.0",
     "graphql": "^14.6.0",
     "graphql-request": "^1.8.2",
+    "graphql-ts-client": "^0.0.17",
     "lodash": "^4.17.15",
     "prettier": "^1.19.1",
     "ts-essentials": "^6.0.1",
