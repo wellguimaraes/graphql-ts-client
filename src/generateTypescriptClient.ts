@@ -10,7 +10,7 @@ import {
   IntrospectionObjectType,
   IntrospectionOutputTypeRef,
 } from 'graphql/utilities/introspectionQuery'
-import { set } from 'lodash'
+import set from 'lodash.set'
 import * as prettier from 'prettier'
 import Case from 'case'
 
@@ -282,15 +282,8 @@ export async function generateTypescriptClient({
   const clientCode = `
     import { GraphQLClient } from 'graphql-request'
     import { Options } from 'graphql-request/dist/src/types'
-    import { jsonToGraphQLQuery } from 'graphql-ts-client'
+    import { jsonToGraphQLQuery, UUID, IDate, Maybe, Projection } from 'graphql-ts-client'
     import { DeepRequired } from 'ts-essentials'
-
-    export type UUID = string
-    export type IDate = Date | string
-    export type Maybe<T> = null | undefined | T
-    export type Projection<S, B> = {
-      [k in keyof S & keyof B]: S[k] extends boolean ? B[k] : B[k] extends Array<infer A> ? Projection<S[k], A>[] : Projection<S[k], B[k]>
-    }
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
