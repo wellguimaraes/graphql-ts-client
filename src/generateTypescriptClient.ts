@@ -11,6 +11,7 @@ import {
   IntrospectionOutputTypeRef,
 } from 'graphql/utilities/introspectionQuery'
 import set from 'lodash.set'
+import orderBy from 'lodash.orderby'
 import * as prettier from 'prettier'
 import Case from 'case'
 
@@ -117,7 +118,9 @@ function gqlSchemaToTypescript(
   if (rawKind === 'ENUM')
     return `
       export enum ${it.name} {
-        ${it.enumValues.map((_: any) => `${Case.camel(_.name)} = '${_.name}'`).join(',\n  ')}
+        ${orderBy(it.enumValues, 'name')
+          .map((_: any) => `${Case.camel(_.name)} = '${_.name}'`)
+          .join(',\n  ')}
       }`
 
   const fields = (it.fields && it.fields) || (it.inputFields && it.inputFields) || []
