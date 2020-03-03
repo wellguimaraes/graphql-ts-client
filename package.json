@@ -1,11 +1,12 @@
 {
   "name": "graphql-ts-client",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "prepare": "yarn build",
     "test": "echo \"no test specified\""
   },
   "author": "Wellington Guimaraes",
@@ -21,12 +22,14 @@
   "dependencies": {
     "@types/graphql": "^14.5.0",
     "@types/lodash": "^4.14.149",
+    "@types/lodash.orderby": "^4.6.6",
     "@types/lodash.set": "^4.3.6",
     "@types/node": "^13.5.0",
     "@types/prettier": "^1.19.0",
     "case": "^1.6.2",
     "graphql": "^14.6.0",
     "graphql-request": "^1.8.2",
+    "lodash.orderby": "^4.6.0",
     "lodash.set": "^4.3.2",
     "prettier": "^1.19.1",
     "ts-essentials": "^6.0.1",
