@@ -175,13 +175,16 @@ function getGraphQLOutputType(type: IntrospectionOutputTypeRef): string {
 function extractInputTypes(types: IntrospectionObjectType[]) {
   const outputTypesTree = {}
 
+
   types.forEach(type =>
     type.fields
       .filter(_ => _.args && _.args.length)
       .forEach(_ =>
         _.args.forEach(a => {
           let inputType = getGraphQLInputType(a.type)
-          if (inputType) set(outputTypesTree, `${type.name}.${_.name}.__args.${a.name}`, inputType)
+          if (inputType) {
+            set(outputTypesTree, `${type.name}.${_.name}.__args.${a.name}`, inputType)
+          }
         })
       )
   )
@@ -189,71 +192,51 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
   types.forEach(t =>
     t.fields.forEach(f => {
       let outputType = getGraphQLOutputType(f.type)
-      if (outputType) set(outputTypesTree, `${t.name}.${f.name}.__shape`, outputType)
-    })
-  )
-
-  function cleanTree() {
-    let removed = 0
-
-    Object.entries(outputTypesTree).forEach(([k1, v1]: any) => {
-      Object.entries(v1).forEach(([k2, v2]: any) => {
-        if (!v2.__args && !outputTypesTree.hasOwnProperty(v2.__shape)) {
-          delete v1[k2]
-          removed++
-        }
-      })
-
-      const shouldKeep = Object.entries(v1).some(([k2, v2]: any) => {
-        return v2.__args || outputTypesTree.hasOwnProperty(v2.__shape)
-      })
-
-      if (!shouldKeep) {
-        delete (outputTypesTree as any)[k1]
-        removed++
+      if (outputType) {
+        set(outputTypesTree, `${t.name}.${f.name}.__shape`, outputType)
       }
     })
-
-    return removed > 0
-  }
-
-  // noinspection StatementWithEmptyBodyJS
-  while (cleanTree());
+  )
 
   return `
     const typesTree = {
       ${Object.entries(outputTypesTree)
-        .map(
-          ([key, value]) => `
-            ${key}: { 
-              ${Object.entries(value as any)
-                .map(
-                  ([k, v]: any) => `
-                    get ${k}(): any {
-                      return {
-                        ${
-                          v.__shape && outputTypesTree.hasOwnProperty(v.__shape)
-                            ? `
-                            __fields: typesTree.${v.__shape},`
-                            : ''
-                        }
-                        ${
-                          v.__args
-                            ? `
-                            __args: {
-                              ${Object.entries(v.__args)
-                                .map(([k, v]) => `${k}: '${v}'`)
-                                .join(',\n')}
-                            }`
-                            : ''
-                        }
-                      }
+        .map(([key, value]) => {
+          let entryCode = Object.entries(value as any)
+            .map(([k, v]: any) => {
+              const cleanShapeType = v.__shape && v.__shape.replace(/[\[\]!?]/g,'')
+              const fieldsCode = v.__shape && outputTypesTree.hasOwnProperty(cleanShapeType) ? `__fields: typesTree.${cleanShapeType},` : ''
+
+              const argsCode = v.__args
+                ? `__args: {
+                      ${Object.entries(v.__args)
+                        .map(([k, v]) => `${k}: '${v}'`)
+                        .join(',\n')}
                     }`
-                )
-                .join(',\n')
-                .trim()} 
-            }`
-        )
+                : ''
+
+              return (
+                (fieldsCode || argsCode) ?
+                `get ${k}(): any {
+                  return {
+                    ${fieldsCode}
+                    ${argsCode}
+                  }
+                }` : `${k}: {}`
+              )
+            })
+            .filter(Boolean)
+            .join(',\n')
+            .trim()
+          return (
+            entryCode &&
+            `
+              ${key}: { 
+                ${entryCode} 
+              }`
+          )
+        })
+        .filter(Boolean)
         .join(',\n')}
     }
   `
@@ -285,7 +268,8 @@ export async function generateTypescriptClient({
   const clientCode = `
     import { GraphQLClient } from 'graphql-request'
     import { Options } from 'graphql-request/dist/src/types'
-    import { jsonToGraphQLQuery, UUID, IDate, Maybe, Projection } from 'graphql-ts-client'
+    import { UUID, IDate, Maybe, Projection } from 'graphql-ts-client/src/types'
+    import { jsonToGraphQLQuery } from 'graphql-ts-client/dist/jsonToGraphQLQuery'
     import { DeepRequired } from 'ts-essentials'
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
