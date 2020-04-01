@@ -271,6 +271,7 @@ export async function generateTypescriptClient({
     import { UUID, IDate, Maybe, Projection } from 'graphql-ts-client/src/types'
     import { jsonToGraphQLQuery } from 'graphql-ts-client/dist/jsonToGraphQLQuery'
     import { DeepRequired } from 'ts-essentials'
+    
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
@@ -279,13 +280,22 @@ export async function generateTypescriptClient({
 
     let _client = new GraphQLClient('${endpoint}')
 
-    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string) {
-      return async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
+    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>) & { raw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> } {
+      const rawEndpoint: any = async <S extends I>(jsonQuery?: S): Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> => {
         // noinspection TypeScriptUnresolvedVariable
         const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
-        const response = await _client.request(query, variables)
-        return response[name]
+        const { data, errors, warnings, headers, status } = (await _client.rawRequest(query, variables)) as any
+        return { data: data[name], errors, warnings, headers, status }
       }
+    
+      const endpoint: any = async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
+        const { data } = await rawEndpoint(jsonQuery)
+        return data
+      }
+    
+      endpoint.raw = rawEndpoint
+      
+      return endpoint
     }
 
     export default {
