@@ -271,6 +271,7 @@ export async function generateTypescriptClient({
     import { UUID, IDate, Maybe, Projection } from 'graphql-ts-client/src/types'
     import { jsonToGraphQLQuery } from 'graphql-ts-client/dist/jsonToGraphQLQuery'
     import { DeepRequired } from 'ts-essentials'
+    import memoizee from 'memoizee'
     
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
@@ -280,7 +281,7 @@ export async function generateTypescriptClient({
 
     let _client = new GraphQLClient('${endpoint}')
 
-    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>) & { raw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> } {
+    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>) & { memo: (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>), memoRaw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }>, raw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> } {
       const rawEndpoint: any = async <S extends I>(jsonQuery?: S): Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> => {
         // noinspection TypeScriptUnresolvedVariable
         const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
@@ -295,6 +296,16 @@ export async function generateTypescriptClient({
     
       endpoint.raw = rawEndpoint
       
+      endpoint.memo = memoizee(endpoint, {
+          maxAge: 30000,
+          normalizer: (args: any) => JSON.stringify(args[0])
+      })
+    
+      endpoint.memoRaw = memoizee(rawEndpoint, {
+        maxAge: 30000,
+        normalizer: (args: any) => JSON.stringify(args[0])
+      })
+    
       return endpoint
     }
 
