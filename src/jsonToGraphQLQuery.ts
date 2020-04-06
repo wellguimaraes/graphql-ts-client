@@ -20,10 +20,13 @@ export function jsonToGraphQLQuery({
     parentType: kind === 'query' ? typesTree.Query : typesTree.Mutation,
   })
 
-  const query = `${kind} ${name}(${Object.entries(variablesData)
-    .map(([name, { type }]: any) => `$${name}: ${type}`)
-    .join(', ')}) { ${name}${toGraphql(jsonQuery)} }`
+  const variablesQuery = Object.keys(variablesData).length
+    ? `(${Object.entries(variablesData)
+        .map(([name, { type }]: any) => `$${name}: ${type}`)
+        .join(', ')})`
+    : ''
 
+  const query = `${kind} ${name}${variablesQuery} { ${name}${toGraphql(jsonQuery)} }`
   const variables = Object.fromEntries(Object.entries(variablesData).map(([k, v]: any) => [k, v.value]))
 
   return {
