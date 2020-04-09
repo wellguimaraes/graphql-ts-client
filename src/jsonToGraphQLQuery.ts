@@ -73,12 +73,8 @@ function toGraphql(jsonQuery: any) {
     .map(([k, v]) => (typeof v === 'object' ? `${k}${toGraphql(v)}` : k))
     .join(' ') as any
 
-  const args = jsonQuery.__args
-    ? `(${Object.entries(jsonQuery.__args)
-        .filter(([k, v]) => v !== undefined)
-        .map(([k, v]: any) => `${k}:${v.substr(VAR_PREFIX_LENGTH)}`)
-        .join(',')})`
-    : ''
+  const validArgs = jsonQuery.__args ? Object.entries(jsonQuery.__args).filter(([_, v]) => v !== undefined) : []
+  const argsQuery = validArgs.length ? `(${validArgs.map(([k, v]: any) => `${k}:${v.substr(VAR_PREFIX_LENGTH)}`).join(',')})` : ''
 
-  return `${args} ${fields ? `{ ${fields} }` : ''}`
+  return `${argsQuery} ${fields ? `{ ${fields} }` : ''}`
 }
