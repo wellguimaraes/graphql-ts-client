@@ -46,11 +46,13 @@ function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any
         .toString(36)
         .substr(2, 4)}`
 
-      variables[variableName] = {
-        type: parentType.__args[k],
-        value: jsonQuery.__args[k],
+      if (jsonQuery.__args[k] !== undefined) {
+        variables[variableName] = {
+          type: parentType.__args[k],
+          value: jsonQuery.__args[k],
+        }
+        jsonQuery.__args[k] = `${VAR_PREFIX}$${variableName}`
       }
-      jsonQuery.__args[k] = `${VAR_PREFIX}$${variableName}`
     })
   }
 
@@ -73,6 +75,7 @@ function toGraphql(jsonQuery: any) {
 
   const args = jsonQuery.__args
     ? `(${Object.entries(jsonQuery.__args)
+        .filter(([k, v]) => v !== undefined)
         .map(([k, v]: any) => `${k}:${v.substr(VAR_PREFIX_LENGTH)}`)
         .join(',')})`
     : ''
