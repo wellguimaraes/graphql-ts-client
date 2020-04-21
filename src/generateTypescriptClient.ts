@@ -268,51 +268,22 @@ export async function generateTypescriptClient({
   const clientCode = `
     import { GraphQLClient } from 'graphql-request'
     import { Options } from 'graphql-request/dist/src/types'
-    import { UUID, IDate, Maybe, Projection } from 'graphql-ts-client/src/types'
-    import { jsonToGraphQLQuery } from 'graphql-ts-client/dist/jsonToGraphQLQuery'
     import { DeepRequired } from 'ts-essentials'
-    import memoizee from 'memoizee'
-    
+    import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
+    import { UUID, IDate, Maybe } from 'graphql-ts-client/dist/types'
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
     ${extractInputTypes(forInputExtraction)}
 
-    let _client = new GraphQLClient('${endpoint}')
-
-    function apiEndpoint<I, O>(kind: 'mutation' | 'query', name: string): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>) & { memo: (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>), memoRaw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }>, raw: <S extends I>(jsonQuery?: S) => Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> } {
-      const rawEndpoint: any = async <S extends I>(jsonQuery?: S): Promise<{ data: Projection<S, O>, errors: any[], warnings: any[], headers: any, status: any }> => {
-        // noinspection TypeScriptUnresolvedVariable
-        const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
-        const { data, errors, warnings, headers, status } = (await _client.rawRequest(query, variables)) as any
-        return { data: data[name], errors, warnings, headers, status }
-      }
-    
-      const endpoint: any = async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
-        const { data } = await rawEndpoint(jsonQuery)
-        return data
-      }
-    
-      endpoint.raw = rawEndpoint
-      
-      endpoint.memo = memoizee(endpoint, {
-          maxAge: 30000,
-          normalizer: (args: any) => JSON.stringify(args[0])
-      })
-    
-      endpoint.memoRaw = memoizee(rawEndpoint, {
-        maxAge: 30000,
-        normalizer: (args: any) => JSON.stringify(args[0])
-      })
-    
-      return endpoint
-    }
+    let client = new GraphQLClient('${endpoint}')
+    let apiEndpoint = getApiEndpointCreator({ getClient: () => client, typesTree, maxAge: 30000 })
 
     export default {
-      setClient: (url: string, options?: Options) => { _client = new GraphQLClient(url, options) },
-      setHeader: (key: string, value: string) => { _client.setHeader(key, value) },
-      setHeaders: (headers: { [k: string]: string }) => { _client.setHeaders(headers) },
+      setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
+      setHeader: (key: string, value: string) => { client.setHeader(key, value) },
+      setHeaders: (headers: { [k: string]: string }) => { client.setHeaders(headers) },
       queries: {
         ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
       },
