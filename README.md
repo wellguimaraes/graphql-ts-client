@@ -6,10 +6,6 @@ Generate fully typed Typescript clients for your GraphQL APIs.
 ```
 yarn add graphql-ts-client
 ```
-or
-```
-npm i graphql-ts-client
-```
 
 ## Usage
 
@@ -21,6 +17,7 @@ import { generateTypescriptClient } from 'graphql-ts-client'
 generateTypescriptClient({
   output: './myAwesomeApi.ts',
   endpoint: 'https://my.awesome-api.com/graphql',
+  verbose: process.env.NODE_ENV === 'development', // when true, log requests to the console
   headers: {
     Authorization: 'Bearer 1234567890987654321',
   },

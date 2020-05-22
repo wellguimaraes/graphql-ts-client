@@ -41,6 +41,7 @@ function gqlTypeToTypescript(
 
   const maybeWrapped = (it: string) => (required || selection ? it : `Maybe<${it}>`)
 
+  // noinspection SuspiciousTypeOfGuard
   if (typeof gqlType === 'string') return maybeWrapped(gqlType)
 
   if (gqlType.kind.endsWith('OBJECT')) return maybeWrapped((gqlType as any).name + (selection ? 'Selection' : ''))
@@ -246,7 +247,7 @@ export async function generateTypescriptClient({
   endpoint,
   output,
   ...options
-}: Options & { output: PathLike; endpoint: string }): Promise<void> {
+}: Options & { output: PathLike; endpoint: string, verbose?: boolean }): Promise<void> {
   const client = new GraphQLClient(endpoint, options)
 
   const {
@@ -271,14 +272,23 @@ export async function generateTypescriptClient({
     import { DeepRequired } from 'ts-essentials'
     import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
     import { UUID, IDate, Maybe } from 'graphql-ts-client/dist/types'
+    ${options.verbose ? `
+    import prettier from "prettier/standalone"
+    import parserGraphql from "prettier/parser-graphql"
+    
+    const formatGraphQL = (query: string) => prettier.format(query, {parser: 'graphql', plugins: [parserGraphql]})
+    ` : `
+    const formatGraphQL = (query: string) => query
+    `}
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
     ${extractInputTypes(forInputExtraction)}
 
+    let verbose = ${Boolean(options.verbose)}
     let client = new GraphQLClient('${endpoint}')
-    let apiEndpoint = getApiEndpointCreator({ getClient: () => client, typesTree, maxAge: 30000 })
+    let apiEndpoint = getApiEndpointCreator({ getClient: () => client, typesTree, maxAge: 30000, verbose, formatGraphQL })
 
     export default {
       setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
