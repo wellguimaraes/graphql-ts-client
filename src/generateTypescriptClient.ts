@@ -105,9 +105,10 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', it: IntrospectionFi
   }
 
   const outputType = gqlTypeToTypescript(it.type)
+  const wrappedOutputType = /^(UUID|IDate|string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
   const inputType = selectionType || 'undefined'
 
-  return `${it.name}: apiEndpoint<${inputType}, DeepRequired<${outputType}>>('${kind}', '${it.name}')`
+  return `${it.name}: apiEndpoint<${inputType}, ${wrappedOutputType}>('${kind}', '${it.name}')`
 }
 
 function gqlSchemaToTypescript(
@@ -176,7 +177,6 @@ function getGraphQLOutputType(type: IntrospectionOutputTypeRef): string {
 function extractInputTypes(types: IntrospectionObjectType[]) {
   const outputTypesTree = {}
 
-
   types.forEach(type =>
     type.fields
       .filter(_ => _.args && _.args.length)
@@ -205,8 +205,9 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
         .map(([key, value]) => {
           let entryCode = Object.entries(value as any)
             .map(([k, v]: any) => {
-              const cleanShapeType = v.__shape && v.__shape.replace(/[\[\]!?]/g,'')
-              const fieldsCode = v.__shape && outputTypesTree.hasOwnProperty(cleanShapeType) ? `__fields: typesTree.${cleanShapeType},` : ''
+              const cleanShapeType = v.__shape && v.__shape.replace(/[\[\]!?]/g, '')
+              const fieldsCode =
+                v.__shape && outputTypesTree.hasOwnProperty(cleanShapeType) ? `__fields: typesTree.${cleanShapeType},` : ''
 
               const argsCode = v.__args
                 ? `__args: {
@@ -216,15 +217,14 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
                     }`
                 : ''
 
-              return (
-                (fieldsCode || argsCode) ?
-                `get ${k}(): any {
+              return fieldsCode || argsCode
+                ? `get ${k}(): any {
                   return {
                     ${fieldsCode}
                     ${argsCode}
                   }
-                }` : `${k}: {}`
-              )
+                }`
+                : `${k}: {}`
             })
             .filter(Boolean)
             .join(',\n')
@@ -247,7 +247,7 @@ export async function generateTypescriptClient({
   endpoint,
   output,
   ...options
-}: Options & { output: PathLike; endpoint: string, verbose?: boolean }): Promise<void> {
+}: Options & { output: PathLike; endpoint: string; verbose?: boolean }): Promise<void> {
   const client = new GraphQLClient(endpoint, options)
 
   const {
@@ -272,14 +272,18 @@ export async function generateTypescriptClient({
     import { DeepRequired } from 'ts-essentials'
     import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
     import { UUID, IDate, Maybe } from 'graphql-ts-client/dist/types'
-    ${options.verbose ? `
+    ${
+      options.verbose
+        ? `
     import prettier from "prettier/standalone"
     import parserGraphql from "prettier/parser-graphql"
     
     const formatGraphQL = (query: string) => prettier.format(query, {parser: 'graphql', plugins: [parserGraphql]})
-    ` : `
+    `
+        : `
     const formatGraphQL = (query: string) => query
-    `}
+    `
+    }
 
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
