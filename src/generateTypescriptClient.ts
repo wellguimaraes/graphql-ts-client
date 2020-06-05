@@ -311,7 +311,7 @@ export async function generateTypescriptClient({
 
     fs.writeFileSync(output, formattedClientCode, { encoding: 'utf8' })
   } catch (e) {
-    console.error('\nThe the GraphQL introspection request failed\n')
+    console.error('\nThe GraphQL introspection request failed\n')
     console.error(e.response || e)
 
     throw e
