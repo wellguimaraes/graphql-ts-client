@@ -2,6 +2,14 @@ export type UUID = string
 export type IDate = Date | string
 export type Maybe<T> = null | undefined | T
 
+export type ResponseListener = (info: {
+  name: string
+  query: string
+  variables: any
+  response?: { data: any; warnings: any; headers: any; status: number; errors: any }
+  error?: any
+}) => void
+
 export type Projection<S, B> = B extends Array<infer W>
   ? W extends UUID | IDate | string | number | boolean | null | undefined
     ? W[]

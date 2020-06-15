@@ -1,3 +1,4 @@
+import Case from 'case'
 import fs, { PathLike } from 'fs'
 import { introspectionQuery, IntrospectionQuery } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
@@ -9,11 +10,11 @@ import {
   IntrospectionInputTypeRef,
   IntrospectionObjectType,
   IntrospectionOutputTypeRef,
+  IntrospectionType,
 } from 'graphql/utilities/introspectionQuery'
-import set from 'lodash.set'
 import orderBy from 'lodash.orderby'
+import set from 'lodash.set'
 import * as prettier from 'prettier'
-import Case from 'case'
 
 enum Scalars {
   number = 'number',
@@ -243,47 +244,36 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
   `
 }
 
-export async function generateTypescriptClient({
-  endpoint,
-  output,
-  ...options
-}: Options & { output: PathLike; endpoint: string; verbose?: boolean }): Promise<void> {
-  try {
-    const client = new GraphQLClient(endpoint, options)
+type IClientOptions = Options & { output: PathLike; endpoint: string; verbose?: boolean }
 
-    const {
-      __schema: { types },
-    } = (await client.request(introspectionQuery)) as IntrospectionQuery
+function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IClientOptions, endpoint: string) {
+  const queries = (types.find(it => it.name === 'Query') as IntrospectionObjectType).fields
+  const mutations = (types.find(it => it.name === 'Mutation') as IntrospectionObjectType).fields
+  const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
+  const objectTypes = types.filter(it => ['OBJECT', 'INPUT_OBJECT'].includes(it.kind) && !it.name.startsWith('__')) as (
+    | IntrospectionObjectType
+    | IntrospectionInputObjectType
+  )[]
 
-    const queries = (types.find(it => it.name === 'Query') as IntrospectionObjectType).fields
-    const mutations = (types.find(it => it.name === 'Mutation') as IntrospectionObjectType).fields
-    const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
-    const objectTypes = types.filter(it => ['OBJECT', 'INPUT_OBJECT'].includes(it.kind) && !it.name.startsWith('__')) as (
-      | IntrospectionObjectType
-      | IntrospectionInputObjectType
-    )[]
+  const forInputExtraction = types.filter(
+    it => !it.name.startsWith('__') && ['OBJECT'].includes(it.kind)
+  ) as IntrospectionObjectType[]
 
-    const forInputExtraction = types.filter(
-      it => !it.name.startsWith('__') && ['OBJECT'].includes(it.kind)
-    ) as IntrospectionObjectType[]
-
-    const clientCode = `
+  const clientCode = `
       import { GraphQLClient } from 'graphql-request'
       import { Options } from 'graphql-request/dist/src/types'
       import { DeepRequired } from 'ts-essentials'
       import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
-      import { UUID, IDate, Maybe } from 'graphql-ts-client/dist/types'
+      import { UUID, IDate, Maybe, ResponseListener } from 'graphql-ts-client/dist/types'
       ${
         options.verbose
           ? `
       import prettier from "prettier/standalone"
       import parserGraphql from "prettier/parser-graphql"
       
-      const formatGraphQL = (query: string) => prettier.format(query, {parser: 'graphql', plugins: [parserGraphql]})
-      `
+      const formatGraphQL = (query: string) => prettier.format(query, {parser: 'graphql', plugins: [parserGraphql]})`
           : `
-      const formatGraphQL = (query: string) => query
-      `
+      const formatGraphQL = (query: string) => query`
       }
   
       ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
@@ -293,10 +283,12 @@ export async function generateTypescriptClient({
   
       let verbose = ${Boolean(options.verbose)}
       let client = new GraphQLClient('${endpoint}')
-      let apiEndpoint = getApiEndpointCreator({ getClient: () => client, typesTree, maxAge: 30000, verbose, formatGraphQL })
+      let responseListeners = IResponseListener[]
+      let apiEndpoint = getApiEndpointCreator({ getClient: () => client, responseListeners, typesTree, maxAge: 30000, verbose, formatGraphQL })
   
       export default {
         setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
+        addResponseListener: (listener: ResponseListener) => responseListeners.push(listener) 
         setHeader: (key: string, value: string) => { client.setHeader(key, value) },
         setHeaders: (headers: { [k: string]: string }) => { client.setHeaders(headers) },
         queries: {
@@ -307,7 +299,18 @@ export async function generateTypescriptClient({
         }
       }`
 
-    const formattedClientCode = prettier.format(clientCode, { semi: false, parser: 'typescript' })
+  return prettier.format(clientCode, { semi: false, parser: 'typescript' })
+}
+
+export async function generateTypescriptClient({ endpoint, output, ...options }: IClientOptions): Promise<void> {
+  try {
+    const client = new GraphQLClient(endpoint, options)
+
+    const {
+      __schema: { types },
+    } = (await client.request(introspectionQuery)) as IntrospectionQuery
+
+    const formattedClientCode = generateClientCode(types, options as IClientOptions, endpoint)
 
     fs.writeFileSync(output, formattedClientCode, { encoding: 'utf8' })
   } catch (e) {
