@@ -283,12 +283,12 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
   
       let verbose = ${Boolean(options.verbose)}
       let client = new GraphQLClient('${endpoint}')
-      let responseListeners = IResponseListener[]
+      let responseListeners: IResponseListener[] = []
       let apiEndpoint = getApiEndpointCreator({ getClient: () => client, responseListeners, typesTree, maxAge: 30000, verbose, formatGraphQL })
   
       export default {
         setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
-        addResponseListener: (listener: ResponseListener) => responseListeners.push(listener) 
+        addResponseListener: (listener: ResponseListener) => responseListeners.push(listener),
         setHeader: (key: string, value: string) => { client.setHeader(key, value) },
         setHeaders: (headers: { [k: string]: string }) => { client.setHeaders(headers) },
         queries: {
