@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
