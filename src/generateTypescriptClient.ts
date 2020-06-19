@@ -264,7 +264,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
       import { Options } from 'graphql-request/dist/src/types'
       import { DeepRequired } from 'ts-essentials'
       import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
-      import { UUID, IDate, Maybe, ResponseListener } from 'graphql-ts-client/dist/types'
+      import { UUID, IDate, Maybe, IResponseListener } from 'graphql-ts-client/dist/types'
       ${
         options.verbose
           ? `
