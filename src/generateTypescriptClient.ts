@@ -175,8 +175,8 @@ function getGraphQLOutputType(type: IntrospectionOutputTypeRef): string {
   }
 }
 
-function extractInputTypes(types: IntrospectionObjectType[]) {
-  const outputTypesTree = {}
+function getTypesTreeCode(types: IntrospectionObjectType[]) {
+  const typesTree = {}
 
   types.forEach(type =>
     type.fields
@@ -185,7 +185,7 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
         _.args.forEach(a => {
           let inputType = getGraphQLInputType(a.type)
           if (inputType) {
-            set(outputTypesTree, `${type.name}.${_.name}.__args.${a.name}`, inputType)
+            set(typesTree, `${type.name}.${_.name}.__args.${a.name}`, inputType)
           }
         })
       )
@@ -195,20 +195,20 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
     t.fields.forEach(f => {
       let outputType = getGraphQLOutputType(f.type)
       if (outputType) {
-        set(outputTypesTree, `${t.name}.${f.name}.__shape`, outputType)
+        set(typesTree, `${t.name}.${f.name}.__shape`, outputType)
       }
     })
   )
 
   return `
     const typesTree = {
-      ${Object.entries(outputTypesTree)
+      ${Object.entries(typesTree)
         .map(([key, value]) => {
           let entryCode = Object.entries(value as any)
             .map(([k, v]: any) => {
               const cleanShapeType = v.__shape && v.__shape.replace(/[\[\]!?]/g, '')
               const fieldsCode =
-                v.__shape && outputTypesTree.hasOwnProperty(cleanShapeType) ? `__fields: typesTree.${cleanShapeType},` : ''
+                v.__shape && typesTree.hasOwnProperty(cleanShapeType) ? `__fields: typesTree.${cleanShapeType},` : ''
 
               const argsCode = v.__args
                 ? `__args: {
@@ -244,7 +244,7 @@ function extractInputTypes(types: IntrospectionObjectType[]) {
   `
 }
 
-type IClientOptions = Options & { output: PathLike; endpoint: string; verbose?: boolean }
+type IClientOptions = Options & { output: PathLike; endpoint: string; verbose?: boolean; formatGraphQL?: boolean }
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IClientOptions, endpoint: string) {
   const queries = (types.find(it => it.name === 'Query') as IntrospectionObjectType).fields
@@ -259,14 +259,16 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
     it => !it.name.startsWith('__') && ['OBJECT'].includes(it.kind)
   ) as IntrospectionObjectType[]
 
+  // language=TypeScript
   const clientCode = `
+      import { DeepRequired } from 'ts-essentials'
       import { GraphQLClient } from 'graphql-request'
       import { Options } from 'graphql-request/dist/src/types'
-      import { DeepRequired } from 'ts-essentials'
       import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
       import { UUID, IDate, Maybe, IResponseListener } from 'graphql-ts-client/dist/types'
+      
       ${
-        options.verbose
+        options.formatGraphQL || options.verbose
           ? `
       import prettier from "prettier/standalone"
       import parserGraphql from "prettier/parser-graphql"
@@ -276,19 +278,33 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
       const formatGraphQL = (query: string) => query`
       }
   
+      // Enums
       ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+      
+      // Input Types
       ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+      
+      // Selection Types
       ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
-      ${extractInputTypes(forInputExtraction)}
+      
+      // Schema Resolution Tree
+      ${getTypesTreeCode(forInputExtraction)}
   
       let verbose = ${Boolean(options.verbose)}
       let client = new GraphQLClient('${endpoint}')
       let responseListeners: IResponseListener[] = []
-      let apiEndpoint = getApiEndpointCreator({ getClient: () => client, responseListeners, typesTree, maxAge: 30000, verbose, formatGraphQL })
+      let apiEndpoint = getApiEndpointCreator({ 
+        getClient: () => client, 
+        responseListeners, 
+        maxAge: 30000, 
+        verbose, 
+        typesTree, 
+        formatGraphQL 
+      })
   
       export default {
         setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
-        addResponseListener: (listener: ResponseListener) => responseListeners.push(listener),
+        addResponseListener: (listener: IResponseListener) => responseListeners.push(listener),
         setHeader: (key: string, value: string) => { client.setHeader(key, value) },
         setHeaders: (headers: { [k: string]: string }) => { client.setHeaders(headers) },
         queries: {

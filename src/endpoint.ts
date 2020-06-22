@@ -1,7 +1,7 @@
 import { GraphQLClient } from 'graphql-request'
 import memoizee from 'memoizee'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
-import { Projection, ResponseListener } from './types'
+import { Projection, IResponseListener } from './types'
 
 type RawEndpoint<I, O> = <S extends I>(
   jsonQuery?: S
@@ -16,7 +16,7 @@ export const getApiEndpointCreator = ({
   responseListeners,
 }: {
   getClient: () => GraphQLClient
-  responseListeners: ResponseListener[]
+  responseListeners: IResponseListener[]
   typesTree: any
   maxAge: number
   verbose: boolean
@@ -43,7 +43,7 @@ export const getApiEndpointCreator = ({
     }
     const responseListenerBasics = {
       name,
-      query,
+      query: formatGraphQL(query),
       variables,
     }
 

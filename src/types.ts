@@ -2,7 +2,7 @@ export type UUID = string
 export type IDate = Date | string
 export type Maybe<T> = null | undefined | T
 
-export type ResponseListener = (info: {
+export type IResponseListener = (info: {
   name: string
   query: string
   variables: any
