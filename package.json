@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,11 +27,13 @@
     "@types/node": "^13.5.0",
     "@types/prettier": "^1.19.0",
     "case": "^1.6.2",
+    "fromentries": "^1.2.0",
     "graphql": "^14.6.0",
     "graphql-request": "^1.8.2",
     "lodash.orderby": "^4.6.0",
     "lodash.set": "^4.3.2",
     "memoizee": "^0.4.14",
+    "object.entries-ponyfill": "^1.0.1",
     "prettier": "^1.19.1",
     "ts-essentials": "^6.0.1",
     "typescript": "^3.7.5"
