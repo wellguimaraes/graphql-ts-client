@@ -43,18 +43,23 @@ function gqlTypeToTypescript(
   const maybeWrapped = (it: string) => (required || selection ? it : `Maybe<${it}>`)
 
   // noinspection SuspiciousTypeOfGuard
-  if (typeof gqlType === 'string') return maybeWrapped(gqlType)
+  if (typeof gqlType === 'string') {
+    return maybeWrapped(gqlType)
+  }
 
-  if (gqlType.kind.endsWith('OBJECT')) return maybeWrapped((gqlType as any).name + (selection ? 'Selection' : ''))
+  if (gqlType.kind.endsWith('OBJECT')) {
+    return maybeWrapped((gqlType as any).name + (selection ? 'Selection' : ''))
+  }
 
-  if (gqlType.kind === 'NON_NULL')
+  if (gqlType.kind === 'NON_NULL') {
     return `${gqlTypeToTypescript(gqlType.ofType, {
       isInput,
       required: true,
       selection,
     })}`
+  }
 
-  if (gqlType.kind === 'LIST')
+  if (gqlType.kind === 'LIST') {
     return maybeWrapped(
       `${gqlTypeToTypescript(gqlType.ofType, {
         isInput,
@@ -62,10 +67,15 @@ function gqlTypeToTypescript(
         selection,
       })}${selection ? '' : '[]'}`
     )
+  }
 
-  if (selection) return ''
+  if (selection) {
+    return ''
+  }
 
-  if (gqlType.kind === 'ENUM' && gqlType.name) return gqlType.name
+  if (gqlType.kind === 'ENUM' && gqlType.name) {
+    return maybeWrapped(gqlType.name)
+  }
 
   if (gqlType.kind === 'SCALAR') {
     return maybeWrapped(gqlScalarToTypescript(gqlType.name))

@@ -1,6 +1,9 @@
 const VAR_PREFIX = '@@VAR@@'
 const VAR_PREFIX_LENGTH = VAR_PREFIX.length
 
+const fromEntries: (arr: [string, any][]) => { [key: string]: any } = require('fromentries')
+const entries: (obj: { [key: string]: any }) => [string, any][] = require('object.entries-ponyfill')
+
 export function jsonToGraphQLQuery({
   kind,
   name,
@@ -21,13 +24,13 @@ export function jsonToGraphQLQuery({
   })
 
   const variablesQuery = Object.keys(variablesData).length
-    ? `(${Object.entries(variablesData)
+    ? `(${entries(variablesData)
         .map(([name, { type }]: any) => `$${name}: ${type}`)
         .join(', ')})`
     : ''
 
   const query = `${kind} ${name}${variablesQuery} { ${name}${toGraphql(jsonQuery)} }`
-  const variables = Object.fromEntries(Object.entries(variablesData).map(([k, v]: any) => [k, v.value]))
+  const variables = fromEntries(entries(variablesData).map(([k, v]: any) => [k, v.value]))
 
   return {
     query,
@@ -68,12 +71,12 @@ function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any
 }
 
 function toGraphql(jsonQuery: any) {
-  const fields = Object.entries(jsonQuery)
+  const fields = entries(jsonQuery)
     .filter(([k, v]) => k !== '__args' && v !== false && v !== undefined)
     .map(([k, v]) => (typeof v === 'object' ? `${k}${toGraphql(v)}` : k))
     .join(' ') as any
 
-  const validArgs = jsonQuery.__args ? Object.entries(jsonQuery.__args).filter(([_, v]) => v !== undefined) : []
+  const validArgs = jsonQuery.__args ? entries(jsonQuery.__args).filter(([_, v]) => v !== undefined) : []
   const argsQuery = validArgs.length ? `(${validArgs.map(([k, v]: any) => `${k}:${v.substr(VAR_PREFIX_LENGTH)}`).join(',')})` : ''
 
   return `${argsQuery} ${fields ? `{ ${fields} }` : ''}`
