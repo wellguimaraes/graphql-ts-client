@@ -33,7 +33,7 @@ async function somewhereOverTheRainbow() {
   // Set an specific header if needed
   myAwesomeApi.setHeader('Authorization', 'Bearer 010101010101')
 
-  const response = myAwesomeApi.queries.globalIndicators({
+  const response = await myAwesomeApi.queries.globalIndicators({
     __args: {
       liveStatus: OnBoardingStage.COMPLETED,
       assetType: AssetType.LEASED,
