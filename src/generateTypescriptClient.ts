@@ -257,8 +257,8 @@ function getTypesTreeCode(types: IntrospectionObjectType[]) {
 type IClientOptions = Options & { output: PathLike; endpoint: string; verbose?: boolean; formatGraphQL?: boolean }
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IClientOptions, endpoint: string) {
-  const queries = (types.find(it => it.name === 'Query') as IntrospectionObjectType).fields
-  const mutations = (types.find(it => it.name === 'Mutation') as IntrospectionObjectType).fields
+  const queries = (<IntrospectionObjectType>types.find(it => it.name === 'Query'))?.fields || []
+  const mutations = (<IntrospectionObjectType>types.find(it => it.name === 'Mutation'))?.fields || []
   const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
   const objectTypes = types.filter(it => ['OBJECT', 'INPUT_OBJECT'].includes(it.kind) && !it.name.startsWith('__')) as (
     | IntrospectionObjectType
