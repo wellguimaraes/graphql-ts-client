@@ -1,11 +1,41 @@
-import { GraphQLClient } from 'graphql-request'
 import memoizee from 'memoizee'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
-import { Projection, IResponseListener } from './types'
+import { IResponseListener, Projection } from './types'
 
 type RawEndpoint<I, O> = <S extends I>(
   jsonQuery?: S
 ) => Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }>
+
+async function graphqlRequest({
+  client,
+  query,
+  variables,
+}: {
+  client: { url: string; headers: { [p: string]: string }; fetch: any }
+  query: string
+  variables: { [p: string]: any }
+}) {
+  const {
+    data: { data, errors, warnings },
+    headers,
+    status,
+  } = await client
+    .fetch(client.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...client.headers,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+    .then(async (r: any) => ({
+      data: await r.json(),
+      headers: r.headers,
+      status: r.status,
+    }))
+
+  return { data, errors, warnings, headers, status }
+}
 
 export const getApiEndpointCreator = ({
   getClient,
@@ -15,7 +45,7 @@ export const getApiEndpointCreator = ({
   formatGraphQL,
   responseListeners,
 }: {
-  getClient: () => GraphQLClient
+  getClient: () => { url: string; headers: { [key: string]: string }; fetch: any }
   responseListeners: IResponseListener[]
   typesTree: any
   maxAge: number
@@ -34,6 +64,7 @@ export const getApiEndpointCreator = ({
   ): Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }> => {
     const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
     const start = +new Date()
+
     const logOptions = {
       kind,
       name,
@@ -41,6 +72,7 @@ export const getApiEndpointCreator = ({
       query,
       variables,
     }
+
     const responseListenerBasics = {
       name,
       query: formatGraphQL(query),
@@ -48,7 +80,12 @@ export const getApiEndpointCreator = ({
     }
 
     try {
-      const { data, errors, warnings, headers, status } = (await getClient().rawRequest(query, variables)) as any
+      const { data, errors, warnings, headers, status } = await graphqlRequest({
+        client: getClient(),
+        query: query,
+        variables: variables,
+      })
+
       const response = { data, warnings, headers, status, errors }
 
       if (verbose) {

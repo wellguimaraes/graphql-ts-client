@@ -12,8 +12,8 @@ import {
   IntrospectionOutputTypeRef,
   IntrospectionType,
 } from 'graphql/utilities/introspectionQuery'
-import orderBy from 'lodash.orderby'
-import set from 'lodash.set'
+import orderBy from 'lodash/orderBy'
+import set from 'lodash/set'
 import * as prettier from 'prettier'
 
 enum Scalars {
@@ -254,9 +254,16 @@ function getTypesTreeCode(types: IntrospectionObjectType[]) {
   `
 }
 
-type IClientOptions = Options & { output: PathLike; endpoint: string; verbose?: boolean; formatGraphQL?: boolean }
+type IClientOptions = {
+  output: PathLike
+  headers: { [key: string]: string }
+  endpoint: string
+  verbose?: boolean
+  formatGraphQL?: boolean
+  target: 'node' | 'browser'
+}
 
-function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IClientOptions, endpoint: string) {
+function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
   const queries = (<IntrospectionObjectType>types.find(it => it.name === 'Query'))?.fields || []
   const mutations = (<IntrospectionObjectType>types.find(it => it.name === 'Mutation'))?.fields || []
   const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
@@ -272,10 +279,10 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
   // language=TypeScript
   const clientCode = `
       import { DeepRequired } from 'ts-essentials'
-      import { GraphQLClient } from 'graphql-request'
-      import { Options } from 'graphql-request/dist/src/types'
       import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
       import { UUID, IDate, Maybe, IResponseListener } from 'graphql-ts-client/dist/types'
+      
+      ${options.target === 'node' ? `import fetch from 'node-fetch'` : ''}
       
       ${
         options.formatGraphQL || options.verbose
@@ -301,10 +308,11 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
       ${getTypesTreeCode(forInputExtraction)}
   
       let verbose = ${Boolean(options.verbose)}
-      let client = new GraphQLClient('${endpoint}')
+      let headers = { } as any
+      let url = '${options.endpoint}'
       let responseListeners: IResponseListener[] = []
       let apiEndpoint = getApiEndpointCreator({ 
-        getClient: () => client, 
+        getClient: () => ({ url, headers, fetch }), 
         responseListeners, 
         maxAge: 30000, 
         verbose, 
@@ -313,10 +321,9 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
       })
   
       export default {
-        setClient: (url: string, options?: Options) => { client = new GraphQLClient(url, options) },
         addResponseListener: (listener: IResponseListener) => responseListeners.push(listener),
-        setHeader: (key: string, value: string) => { client.setHeader(key, value) },
-        setHeaders: (headers: { [k: string]: string }) => { client.setHeaders(headers) },
+        setHeader: (key: string, value: string) => { headers[key] = value },
+        setHeaders: (newHeaders: { [k: string]: string }) => { headers = newHeaders },
         queries: {
           ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
         },
@@ -328,15 +335,15 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: IC
   return prettier.format(clientCode, { semi: false, parser: 'typescript' })
 }
 
-export async function generateTypescriptClient({ endpoint, output, ...options }: IClientOptions): Promise<void> {
+export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<void> {
   try {
-    const client = new GraphQLClient(endpoint, options)
+    const client = new GraphQLClient(options.endpoint, options)
 
     const {
       __schema: { types },
     } = (await client.request(introspectionQuery)) as IntrospectionQuery
 
-    const formattedClientCode = generateClientCode(types, options as IClientOptions, endpoint)
+    const formattedClientCode = generateClientCode(types, options)
 
     fs.writeFileSync(output, formattedClientCode, { encoding: 'utf8' })
   } catch (e) {

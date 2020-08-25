@@ -1,8 +1,8 @@
 const VAR_PREFIX = '@@VAR@@'
 const VAR_PREFIX_LENGTH = VAR_PREFIX.length
 
-const fromEntries: (arr: [string, any][]) => { [key: string]: any } = require('fromentries')
-const entries: (obj: { [key: string]: any }) => [string, any][] = require('object.entries-ponyfill')
+const fromEntries: (arr: [string, any][]) => { [key: string]: any } = require('lodash/fromPairs')
+const entries: (obj: { [key: string]: any }) => [string, any][] = require('lodash/toPairs')
 
 export function jsonToGraphQLQuery({
   kind,
