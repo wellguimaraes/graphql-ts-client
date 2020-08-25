@@ -2,7 +2,6 @@ import Case from 'case'
 import fs, { PathLike } from 'fs'
 import { introspectionQuery, IntrospectionQuery } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
-import { Options } from 'graphql-request/dist/src/types'
 import {
   IntrospectionEnumType,
   IntrospectionField,
@@ -312,7 +311,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       let url = '${options.endpoint}'
       let responseListeners: IResponseListener[] = []
       let apiEndpoint = getApiEndpointCreator({ 
-        getClient: () => ({ url, headers, fetch: ${options.target === 'node' ? 'fetch' : 'window.fetch'} }), 
+        getClient: () => ({ url, headers, fetch: ${options.target === 'node' ? 'fetch' : 'window.fetch.bind(window)'} }), 
         responseListeners, 
         maxAge: 30000, 
         verbose, 

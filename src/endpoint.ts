@@ -6,37 +6,6 @@ type RawEndpoint<I, O> = <S extends I>(
   jsonQuery?: S
 ) => Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }>
 
-async function graphqlRequest({
-  client,
-  query,
-  variables,
-}: {
-  client: { url: string; headers: { [p: string]: string }; fetch: any }
-  query: string
-  variables: { [p: string]: any }
-}) {
-  const {
-    data: { data, errors, warnings },
-    headers,
-    status,
-  } = await client
-    .fetch(client.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...client.headers,
-      },
-      body: JSON.stringify({ query, variables }),
-    })
-    .then(async (r: any) => ({
-      data: await r.json(),
-      headers: r.headers,
-      status: r.status,
-    }))
-
-  return { data, errors, warnings, headers, status }
-}
-
 export const getApiEndpointCreator = ({
   getClient,
   typesTree,
@@ -45,7 +14,7 @@ export const getApiEndpointCreator = ({
   formatGraphQL,
   responseListeners,
 }: {
-  getClient: () => { url: string; headers: { [key: string]: string }; fetch: any }
+  getClient: () => { url: string; headers: { [key: string]: string }; fetch: (...args: any[]) => any }
   responseListeners: IResponseListener[]
   typesTree: any
   maxAge: number
@@ -138,6 +107,37 @@ export const getApiEndpointCreator = ({
   endpoint.memoRaw = memoizee(rawEndpoint, memoizeeOptions)
 
   return endpoint
+}
+
+async function graphqlRequest({
+                                client,
+                                query,
+                                variables,
+                              }: {
+  client: { url: string; headers: { [p: string]: string }; fetch: any }
+  query: string
+  variables: { [p: string]: any }
+}) {
+  const {
+    data: { data, errors, warnings },
+    headers,
+    status,
+  } = await client
+    .fetch(client.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...client.headers,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+    .then(async (r: any) => ({
+      data: await r.json(),
+      headers: r.headers,
+      status: r.status,
+    }))
+
+  return { data, errors, warnings, headers, status }
 }
 
 function logRequest({
