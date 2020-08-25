@@ -312,7 +312,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       let url = '${options.endpoint}'
       let responseListeners: IResponseListener[] = []
       let apiEndpoint = getApiEndpointCreator({ 
-        getClient: () => ({ url, headers, fetch }), 
+        getClient: () => ({ url, headers, fetch: ${options.target === 'node' ? 'fetch' : 'window.fetch'} }), 
         responseListeners, 
         maxAge: 30000, 
         verbose, 
