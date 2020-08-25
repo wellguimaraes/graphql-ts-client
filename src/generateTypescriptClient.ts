@@ -25,7 +25,7 @@ enum Scalars {
 }
 
 function gqlScalarToTypescript(gqlType: string) {
-  if (/(int|long|double|decimal)/i.test(gqlType)) return 'number'
+  if (/(int|long|double|decimal|float)/i.test(gqlType)) return 'number'
   if (/date/i.test(gqlType)) return 'IDate'
   if (/boolean/i.test(gqlType)) return 'boolean'
   if (/uuid/i.test(gqlType)) return 'UUID'
