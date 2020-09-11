@@ -74,7 +74,7 @@ export const getApiEndpointCreator = ({
         )
       )
 
-      return { data: data[name], errors, warnings, headers, status }
+      return { data: data?.[name], errors, warnings, headers, status }
     } catch (error) {
       if (verbose) {
         logRequest({
