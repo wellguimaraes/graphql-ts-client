@@ -7,7 +7,7 @@ const entries: (obj: { [key: string]: any }) => [string, any][] = require('lodas
 export function jsonToGraphQLQuery({
   kind,
   name,
-  jsonQuery,
+  jsonQuery = {},
   typesTree,
 }: {
   kind: 'query' | 'mutation'
