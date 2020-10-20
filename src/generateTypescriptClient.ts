@@ -255,6 +255,7 @@ function getTypesTreeCode(types: IntrospectionObjectType[]) {
 
 type IClientOptions = {
   output: PathLike
+  clientName?: string,
   headers: { [key: string]: string }
   endpoint: string
   verbose?: boolean
@@ -274,6 +275,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   const forInputExtraction = types.filter(
     it => !it.name.startsWith('__') && ['OBJECT'].includes(it.kind)
   ) as IntrospectionObjectType[]
+
+  const clientName = options.clientName || 'client'
 
   // language=TypeScript
   const clientCode = `
@@ -318,8 +321,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
         typesTree, 
         formatGraphQL 
       })
-  
-      export default {
+      
+      export const ${clientName} = {
         addResponseListener: (listener: IResponseListener) => responseListeners.push(listener),
         setHeader: (key: string, value: string) => { headers[key] = value },
         setHeaders: (newHeaders: { [k: string]: string }) => { headers = newHeaders },
@@ -329,7 +332,9 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
         mutations: {
           ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
         }
-      }`
+      }
+  
+      export default ${clientName}`
 
   return prettier.format(clientCode, { semi: false, parser: 'typescript' })
 }
