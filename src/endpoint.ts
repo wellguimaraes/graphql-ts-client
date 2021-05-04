@@ -110,10 +110,10 @@ export const getApiEndpointCreator = ({
 }
 
 async function graphqlRequest({
-                                client,
-                                query,
-                                variables,
-                              }: {
+  client,
+  query,
+  variables,
+}: {
   client: { url: string; headers: { [p: string]: string }; fetch: any }
   query: string
   variables: { [p: string]: any }

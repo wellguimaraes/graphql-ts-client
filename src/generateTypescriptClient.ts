@@ -1,19 +1,22 @@
 import Case from 'case'
 import fs, { PathLike } from 'fs'
-import { introspectionQuery, IntrospectionQuery } from 'graphql'
-import { GraphQLClient } from 'graphql-request'
 import {
+  getIntrospectionQuery,
   IntrospectionEnumType,
   IntrospectionField,
   IntrospectionInputObjectType,
   IntrospectionInputTypeRef,
   IntrospectionObjectType,
   IntrospectionOutputTypeRef,
+  IntrospectionQuery,
   IntrospectionType,
-} from 'graphql/utilities/introspectionQuery'
+} from 'graphql'
+import { GraphQLClient } from 'graphql-request'
 import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
 import * as prettier from 'prettier'
+
+const introspectionQuery = getIntrospectionQuery()
 
 enum Scalars {
   number = 'number',
@@ -255,12 +258,11 @@ function getTypesTreeCode(types: IntrospectionObjectType[]) {
 
 type IClientOptions = {
   output: PathLike
-  clientName?: string,
+  clientName?: string
   headers: { [key: string]: string }
   endpoint: string
   verbose?: boolean
   formatGraphQL?: boolean
-  target: 'node' | 'browser'
 }
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
@@ -280,61 +282,60 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 
   // language=TypeScript
   const clientCode = `
-      import { DeepRequired } from 'ts-essentials'
-      import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
-      import { UUID, IDate, Maybe, IResponseListener } from 'graphql-ts-client/dist/types'
-      
-      ${options.target === 'node' ? `import fetch from 'node-fetch'` : ''}
-      
-      ${
-        options.formatGraphQL || options.verbose
-          ? `
+    import { DeepRequired } from 'ts-essentials'
+    import { getApiEndpointCreator } from 'graphql-ts-client/dist/endpoint'
+    import { UUID, IDate, Maybe, IResponseListener } from 'graphql-ts-client/dist/types'
+    import fetch from 'cross-fetch'
+
+    ${
+      options.formatGraphQL || options.verbose
+        ? `
       import prettier from "prettier/standalone"
       import parserGraphql from "prettier/parser-graphql"
       
       const formatGraphQL = (query: string) => prettier.format(query, {parser: 'graphql', plugins: [parserGraphql]})`
-          : `
+        : `
       const formatGraphQL = (query: string) => query`
+    }
+
+    // Enums
+    ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+
+    // Input Types
+    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
+
+    // Selection Types
+    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
+
+    // Schema Resolution Tree
+    ${getTypesTreeCode(forInputExtraction)}
+
+    let verbose = ${Boolean(options.verbose)}
+    let headers = { } as any
+    let url = '${options.endpoint}'
+    let responseListeners: IResponseListener[] = []
+    let apiEndpoint = getApiEndpointCreator({
+      getClient: () => ({ url, headers, fetch }),
+      responseListeners,
+      maxAge: 30000,
+      verbose,
+      typesTree,
+      formatGraphQL
+    })
+
+    export const ${clientName} = {
+      addResponseListener: (listener: IResponseListener) => responseListeners.push(listener),
+      setHeader: (key: string, value: string) => { headers[key] = value },
+      setHeaders: (newHeaders: { [k: string]: string }) => { headers = newHeaders },
+      queries: {
+        ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
+      },
+      mutations: {
+        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
       }
-  
-      // Enums
-      ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
-      
-      // Input Types
-      ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
-      
-      // Selection Types
-      ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
-      
-      // Schema Resolution Tree
-      ${getTypesTreeCode(forInputExtraction)}
-  
-      let verbose = ${Boolean(options.verbose)}
-      let headers = { } as any
-      let url = '${options.endpoint}'
-      let responseListeners: IResponseListener[] = []
-      let apiEndpoint = getApiEndpointCreator({ 
-        getClient: () => ({ url, headers, fetch: ${options.target === 'node' ? 'fetch' : 'window.fetch.bind(window)'} }), 
-        responseListeners, 
-        maxAge: 30000, 
-        verbose, 
-        typesTree, 
-        formatGraphQL 
-      })
-      
-      export const ${clientName} = {
-        addResponseListener: (listener: IResponseListener) => responseListeners.push(listener),
-        setHeader: (key: string, value: string) => { headers[key] = value },
-        setHeaders: (newHeaders: { [k: string]: string }) => { headers = newHeaders },
-        queries: {
-          ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
-        },
-        mutations: {
-          ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
-        }
-      }
-  
-      export default ${clientName}`
+    }
+
+    export default ${clientName}`
 
   return prettier.format(clientCode, { semi: false, parser: 'typescript' })
 }

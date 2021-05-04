@@ -1,7 +1,7 @@
 {
   "name": "graphql-ts-client",
-  "version": "2.3.0",
-  "description": "",
+  "version": "3.0.0",
+  "description": "GraphQL Typescript Client Generator",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -11,28 +11,28 @@
   "author": "Wellington Guimaraes",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/wellguimaraes/actionware/issues"
+    "url": "https://github.com/wellguimaraes/graphql-ts-client/issues"
   },
-  "homepage": "https://github.com/wellguimaraes/actionware#readme",
+  "homepage": "https://github.com/wellguimaraes/graphql-ts-client#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wellguimaraes/graphql-ts-client.git"
   },
   "dependencies": {
+    "graphql-ts-client": "^2.3.1",
     "@types/graphql": "^14.5.0",
-    "@types/lodash": "^4.14.159",
-    "@types/memoizee": "^0.4.3",
+    "@types/lodash": "^4.14.168",
+    "@types/memoizee": "^0.4.5",
     "@types/node": "^13.5.0",
-    "@types/node-fetch": "^2.5.7",
-    "@types/prettier": "^1.19.0",
-    "case": "^1.6.2",
-    "graphql": "^14.6.0",
-    "graphql-request": "^1.8.2",
-    "lodash": "^4.17.20",
-    "memoizee": "^0.4.14",
-    "node-fetch": "^2.6.0",
-    "prettier": "^1.19.1",
-    "ts-essentials": "^6.0.1",
-    "typescript": "^3.9.7"
+    "@types/prettier": "^2.2.3",
+    "case": "^1.6.3",
+    "graphql": "^15.5.0",
+    "graphql-request": "^3.4.0",
+    "cross-fetch": "^3.1.4",
+    "lodash": "^4.17.21",
+    "memoizee": "^0.4.15",
+    "prettier": "^2.2.1",
+    "ts-essentials": "^7.0.1",
+    "typescript": "^4.2.4"
   }
 }

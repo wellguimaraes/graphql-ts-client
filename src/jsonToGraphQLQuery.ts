@@ -45,9 +45,7 @@ function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any
     Object.keys(jsonQuery.__args).forEach(k => {
       if (typeof jsonQuery.__args[k] === 'string' && jsonQuery.__args[k].startsWith(VAR_PREFIX)) return
 
-      const variableName = `${k}_${Math.random()
-        .toString(36)
-        .substr(2, 4)}`
+      const variableName = `${k}_${Math.random().toString(36).substr(2, 4)}`
 
       if (jsonQuery.__args[k] !== undefined) {
         variables[variableName] = {
