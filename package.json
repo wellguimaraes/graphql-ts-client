@@ -2,14 +2,17 @@
   "name": "graphql-ts-client",
   "version": "3.0.0",
   "description": "GraphQL Typescript Client Generator",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "npx shx rm -rf dist && tsc",
-    "prepublishOnly": " yarn build"
-  },
   "author": "Wellington Guimaraes",
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=12"
+  },
   "bugs": {
     "url": "https://github.com/wellguimaraes/graphql-ts-client/issues"
   },
@@ -18,21 +21,66 @@
     "type": "git",
     "url": "git+https://github.com/wellguimaraes/graphql-ts-client.git"
   },
+  "scripts": {
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build",
+    "prepublishOnly": "yarn build",
+    "size": "size-limit",
+    "analyze": "size-limit --why"
+  },
+  "peerDependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "proseWrap": "always",
+    "bracketSpacing": true,
+    "jsxBracketSameLine": false,
+    "semi": false,
+    "singleQuote": true,
+    "arrowParens": "avoid",
+    "endOfLine": "lf",
+    "printWidth": 130,
+    "htmlWhitespaceSensitivity": "ignore",
+    "jsxSingleQuote": false
+  },
+  "module": "dist/graphql-ts-client.esm.js",
+  "size-limit": [
+    {
+      "path": "dist/graphql-ts-client.cjs.production.min.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/graphql-ts-client.esm.js",
+      "limit": "10 KB"
+    }
+  ],
   "dependencies": {
-    "graphql-ts-client": "^2.3.1",
     "@types/graphql": "^14.5.0",
     "@types/lodash": "^4.14.168",
     "@types/memoizee": "^0.4.5",
     "@types/node": "^13.5.0",
-    "@types/prettier": "^2.2.3",
     "case": "^1.6.3",
     "graphql": "^15.5.0",
-    "graphql-request": "^3.4.0",
     "cross-fetch": "^3.1.4",
     "lodash": "^4.17.21",
     "memoizee": "^0.4.15",
-    "prettier": "^2.2.1",
     "ts-essentials": "^7.0.1",
-    "typescript": "^4.2.4"
+    "graphql-request": "3.4.0"
+  },
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^5.0.1",
+    "husky": "^6.0.0",
+    "size-limit": "^5.0.1",
+    "tsdx": "^0.14.1",
+    "tslib": "^2.3.0",
+    "typescript": "^4.3.4"
   }
 }
