@@ -11,7 +11,7 @@
     "src"
   ],
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "bugs": {
     "url": "https://github.com/wellguimaraes/graphql-ts-client/issues"
