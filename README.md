@@ -32,6 +32,7 @@ import myAwesomeApi, { AssetType, Granularity, OnBoardingStage } from './myAweso
 async function somewhereOverTheRainbow() {
   // Set an specific header if needed
   myAwesomeApi.setHeader('Authorization', 'Bearer 010101010101')
+  myAwesomeApi.setUrl('https://my-runtime-url.com/graphql')
 
   const response = await myAwesomeApi.queries.globalIndicators({
     __args: {

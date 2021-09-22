@@ -79,7 +79,7 @@ export const getApiEndpointCreator = ({
       if (verbose) {
         logRequest({
           ...logOptions,
-          error,
+          error: error as Error,
           duration: +new Date() - start,
         })
       }
