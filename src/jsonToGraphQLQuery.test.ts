@@ -1,4 +1,4 @@
-import { jsonToGraphQLQuery } from '../src/jsonToGraphQLQuery'
+import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
 
 describe('jsonToGraphQLQuery', () => {
   it('use args without mutating', () => {
