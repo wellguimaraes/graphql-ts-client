@@ -1,5 +1,3 @@
-export type UUID = string
-export type IDate = Date | string
 export type Maybe<T> = null | undefined | T
 
 export type IResponseListener = (info: {
@@ -11,10 +9,10 @@ export type IResponseListener = (info: {
 }) => void
 
 export type Projection<S, B> = B extends Array<infer W>
-  ? W extends UUID | IDate | string | number | boolean | null | undefined
+  ? W extends Date | string | number | boolean | null | undefined
     ? W[]
     : Projection<S, W>[]
-  : B extends UUID | IDate | string | number | boolean | null | undefined
+  : B extends Date | string | number | boolean | null | undefined
   ? B
   : {
       [k in keyof S & keyof B]: S[k] extends boolean
