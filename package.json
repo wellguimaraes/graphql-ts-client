@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "GraphQL Typescript Client Generator",
   "author": "Wellington Guimaraes",
   "license": "MIT",
@@ -75,10 +75,10 @@
     "ts-essentials": "^8.1.0"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "@size-limit/preset-small-lib": "^5.0.4",
     "apollo-server": "^3.3.0",
     "concurrently": "^6.2.1",
+    "cross-env": "^7.0.3",
     "husky": "^7.0.2",
     "prettier": "^2.4.1",
     "size-limit": "^5.0.4",
