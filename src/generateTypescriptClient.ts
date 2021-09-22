@@ -82,7 +82,7 @@ function gqlFieldToTypescript(field: IntrospectionField, { isInput, selection, d
     selection,
   })
 
-  fieldTypeDefinition = selection ? '' : `${fieldTypeDefinition}`
+  fieldTypeDefinition = `${fieldTypeDefinition}`
 
   if (selection && field.args && field.args.length) {
     let fieldsOnArgs = field.args.map((arg) => gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false }))

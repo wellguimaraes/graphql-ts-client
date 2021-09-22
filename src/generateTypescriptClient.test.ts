@@ -10,7 +10,9 @@ describe('generateTypescriptClient', () => {
     })
 
     // TODO: create better tests to check functionality of generated code
-    const client = eval(ts.transpile(generatedCode))
+    const client = eval(ts.transpile(generatedCode, {
+      target: ts.ScriptTarget.ES5
+    }))
 
     const books = await client.queries.booksWithOptionalParams({
       title: true,
