@@ -125,7 +125,7 @@ function gqlSchemaToTypescript(
   const rawKind = gqlType.kind || gqlType.type
 
   if (rawKind === 'SCALAR') {
-    return `export type ${gqlType.name} = string ${/date/i.test(gqlType.name) ? ' | Date' : ''}`
+    return `export type ${gqlType.name} = ${/date/i.test(gqlType.name) ? 'IDate' : 'string'}`
   }
 
   if (rawKind === 'ENUM')
@@ -300,6 +300,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     }
 
     // Scalars
+    export type IDate = string | Date
     ${scalars.map(it => gqlSchemaToTypescript(it, { selection: false }))
       .join('\n')}
 
