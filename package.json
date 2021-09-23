@@ -23,7 +23,7 @@
   },
   "scripts": {
     "start": "tsdx watch",
-    "build": "tsdx build",
+    "build": "tsdx build --entry src/index.ts src/endpoint.ts",
     "test": "cross-env GQL_CLIENT_DIST_PATH='.' tsdx test",
     "lint": "tsdx lint",
     "prepare": "tsdx build",
