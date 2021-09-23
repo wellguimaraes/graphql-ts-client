@@ -2,7 +2,7 @@ import { ApolloServer } from 'apollo-server'
 import * as path from 'path'
 import * as ts from 'typescript'
 import { generateTypescriptClient } from './generateTypescriptClient'
-import { startServer } from '../testServer'
+import { startServer } from './testServer'
 
 let testServer: { server: ApolloServer; url: string }
 let client: any
