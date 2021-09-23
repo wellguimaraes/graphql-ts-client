@@ -26,7 +26,7 @@
     "build": "tsdx build --entry src/index.ts --entry src/endpoint.ts",
     "test": "cross-env GQL_CLIENT_DIST_PATH='.' tsdx test",
     "lint": "tsdx lint",
-    "prepare": "tsdx build",
+    "prepare": "yarn build",
     "prepublishOnly": "yarn build",
     "size": "size-limit",
     "analyze": "size-limit --why"
