@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "5.0.2",
+  "version": "5.0.5",
   "description": "GraphQL Typescript Client Generator",
   "author": "Wellington Guimaraes",
   "license": "MIT",
@@ -23,7 +23,7 @@
   },
   "scripts": {
     "start": "tsdx watch",
-    "build": "tsdx build --entry src/index.ts src/endpoint.ts",
+    "build": "tsdx build --entry src/index.ts --entry src/endpoint.ts",
     "test": "cross-env GQL_CLIENT_DIST_PATH='.' tsdx test",
     "lint": "tsdx lint",
     "prepare": "tsdx build",
@@ -32,11 +32,6 @@
     "analyze": "size-limit --why"
   },
   "peerDependencies": {},
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
-  },
   "prettier": {
     "trailingComma": "es5",
     "tabWidth": 2,
@@ -63,26 +58,27 @@
     }
   ],
   "dependencies": {
-    "@types/graphql": "^14.5.0",
-    "@types/lodash": "^4.14.173",
-    "@types/memoizee": "^0.4.6",
-    "@types/node": "^16.9.6",
     "case": "^1.6.3",
     "cross-fetch": "^3.1.4",
     "graphql": "^15.6.0",
     "lodash": "^4.17.21",
-    "memoizee": "^0.4.15",
-    "ts-essentials": "^8.1.0"
+    "memoizee": "^0.4.15"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^5.0.4",
+    "@types/graphql": "^14.5.0",
+    "@types/jest": "^27.0.2",
+    "@types/lodash": "^4.14.173",
+    "@types/memoizee": "^0.4.6",
+    "@types/node": "^16.9.6",
+    "@types/prettier": "^2.3.2",
     "apollo-server": "^3.3.0",
     "concurrently": "^6.2.1",
     "cross-env": "^7.0.3",
-    "husky": "^7.0.2",
     "prettier": "^2.4.1",
     "size-limit": "^5.0.4",
-    "tsdx": "^0.14.1",
+    "ts-essentials": "^8.1.0",
+    "tsdx": "https://github.com/agilgur5/tsdx.git#dist-multi",
     "tslib": "^2.3.1",
     "typescript": "^4.4.3"
   }
