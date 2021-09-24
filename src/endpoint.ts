@@ -1,10 +1,12 @@
 import memoizee from 'memoizee'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
-import { IResponseListener, Projection } from './types'
+import { DeepReplace, IResponseListener, Projection } from './types'
 
 type RawEndpoint<I, O> = <S extends I>(
   jsonQuery?: S
 ) => Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }>
+
+type JsonOutput<O> = DeepReplace<O, [string | Date, string]>
 
 export const getApiEndpointCreator = ({
   getClient,
@@ -23,10 +25,10 @@ export const getApiEndpointCreator = ({
 }) => <I, O>(
   kind: 'mutation' | 'query',
   name: string
-): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>) & {
-  memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, O>>
-  memoRaw: RawEndpoint<I, O>
-  raw: RawEndpoint<I, O>
+): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
+  memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>
+  memoRaw: RawEndpoint<I, JsonOutput<O>>
+  raw: RawEndpoint<I, JsonOutput<O>>
 } => {
   const rawEndpoint: any = async <S extends I>(
     jsonQuery?: S

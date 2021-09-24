@@ -12,6 +12,7 @@ const typeDefs = gql`
   input BookSearchParamsAllOptional {
     title: String
     author: String
+    createdAfter: ISODate 
   }
 
   input BookSearchParamsSomeRequired {
