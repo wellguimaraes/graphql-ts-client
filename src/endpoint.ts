@@ -8,108 +8,109 @@ type RawEndpoint<I, O> = <S extends I>(
 
 type JsonOutput<O> = DeepReplace<O, [string | Date, string]>
 
-export const getApiEndpointCreator = ({
-  getClient,
-  typesTree,
-  maxAge,
-  verbose,
-  formatGraphQL,
-  responseListeners,
-}: {
-  getClient: () => { url: string; headers: { [key: string]: string }; fetch: (...args: any[]) => any }
-  responseListeners: IResponseListener[]
-  typesTree: any
-  maxAge: number
-  verbose: boolean
-  formatGraphQL: any
-}) => <I, O>(
-  kind: 'mutation' | 'query',
-  name: string
-): (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
+type Endpoint<I, O> = (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
   memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>
   memoRaw: RawEndpoint<I, JsonOutput<O>>
   raw: RawEndpoint<I, JsonOutput<O>>
-} => {
-  const rawEndpoint: any = async <S extends I>(
-    jsonQuery?: S
-  ): Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }> => {
-    const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
-    const start = +new Date()
-
-    const logOptions = {
-      kind,
-      name,
-      formatGraphQL,
-      query,
-      variables,
-    }
-
-    const responseListenerBasics = {
-      name,
-      query: formatGraphQL(query),
-      variables,
-    }
-
-    try {
-      const { data, errors, warnings, headers, status } = await graphqlRequest({
-        client: getClient(),
-        query: query,
-        variables: variables,
-      })
-
-      const response = { data, warnings, headers, status, errors }
-
-      if (verbose) {
-        logRequest({
-          ...logOptions,
-          response,
-          duration: +new Date() - start,
-        })
-      }
-
-      setTimeout(() =>
-        responseListeners.forEach(runResponseListener =>
-          runResponseListener({
-            ...responseListenerBasics,
-            response,
-          })
-        )
-      )
-
-      return { data: data?.[name], errors, warnings, headers, status }
-    } catch (error) {
-      if (verbose) {
-        logRequest({
-          ...logOptions,
-          error: error as Error,
-          duration: +new Date() - start,
-        })
-      }
-
-      setTimeout(() =>
-        responseListeners.forEach(runResponseListener => runResponseListener({ ...responseListenerBasics, error }))
-      )
-
-      throw error
-    }
-  }
-
-  const endpoint: any = async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
-    const { data } = await rawEndpoint(jsonQuery)
-    return data
-  }
-
-  const memoizeeOptions = {
-    maxAge,
-    normalizer: (args: any) => JSON.stringify(args[0]),
-  }
-
-  endpoint.raw = rawEndpoint
-  endpoint.memo = memoizee(endpoint, memoizeeOptions)
-  endpoint.memoRaw = memoizee(rawEndpoint, memoizeeOptions)
-
-  return endpoint
 }
+
+export const getApiEndpointCreator =
+  ({
+    getClient,
+    typesTree,
+    maxAge,
+    verbose,
+    formatGraphQL,
+    responseListeners,
+  }: {
+    getClient: () => { url: string; headers: { [key: string]: string }; fetch: (...args: any[]) => any }
+    responseListeners: IResponseListener[]
+    typesTree: any
+    maxAge: number
+    verbose: boolean
+    formatGraphQL: any
+  }) =>
+  <I, O>(kind: 'mutation' | 'query', name: string): Endpoint<I, O> => {
+    const rawEndpoint: any = async <S extends I>(
+      jsonQuery?: S
+    ): Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }> => {
+      const { query, variables } = jsonToGraphQLQuery({ kind, name, jsonQuery, typesTree })
+      const start = +new Date()
+
+      const logOptions = {
+        kind,
+        name,
+        formatGraphQL,
+        query,
+        variables,
+      }
+
+      const responseListenerBasics = {
+        name,
+        query: formatGraphQL(query),
+        variables,
+      }
+
+      try {
+        const { data, errors, warnings, headers, status } = await graphqlRequest({
+          client: getClient(),
+          query: query,
+          variables: variables,
+        })
+
+        const response = { data, warnings, headers, status, errors }
+
+        if (verbose) {
+          logRequest({
+            ...logOptions,
+            response,
+            duration: +new Date() - start,
+          })
+        }
+
+        setTimeout(() =>
+          responseListeners.forEach(runResponseListener =>
+            runResponseListener({
+              ...responseListenerBasics,
+              response,
+            })
+          )
+        )
+
+        return { data: data?.[name], errors, warnings, headers, status }
+      } catch (error) {
+        if (verbose) {
+          logRequest({
+            ...logOptions,
+            error: error as Error,
+            duration: +new Date() - start,
+          })
+        }
+
+        setTimeout(() =>
+          responseListeners.forEach(runResponseListener => runResponseListener({ ...responseListenerBasics, error }))
+        )
+
+        throw error
+      }
+    }
+
+    const endpoint: any = async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
+      const { data } = await rawEndpoint(jsonQuery)
+      return data
+    }
+
+    const memoizeeOptions = {
+      maxAge,
+      normalizer: (args: any) => JSON.stringify(args[0]),
+    }
+
+    endpoint.raw = rawEndpoint
+    endpoint.memo = memoizee(endpoint, memoizeeOptions)
+    endpoint.memoRaw = memoizee(rawEndpoint, memoizeeOptions)
+
+    return endpoint
+  }
 
 async function graphqlRequest({
   client,
