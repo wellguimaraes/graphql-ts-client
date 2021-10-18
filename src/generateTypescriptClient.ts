@@ -115,7 +115,7 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', endpoint: Introspec
   const wrappedOutputType = /^(string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
   const inputType = selectionType || 'undefined'
 
-  return `${endpoint.name}: apiEndpoint<${inputType}, ${wrappedOutputType}>('${kind}', '${endpoint.name}')`
+  return `${endpoint.name}: apiEndpoint('${kind}', '${endpoint.name}') as Endpoint<${inputType}, ${wrappedOutputType}>`
 }
 
 function gqlSchemaToTypescript(
@@ -284,7 +284,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols
     
     import { DeepRequired } from 'ts-essentials'
-    import { getApiEndpointCreator } from '${graphqlTsClientPath}/endpoint'
+    import { getApiEndpointCreator, Endpoint } from '${graphqlTsClientPath}/endpoint'
     import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
     import fetch from 'cross-fetch'
 

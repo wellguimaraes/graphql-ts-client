@@ -8,7 +8,7 @@ type RawEndpoint<I, O> = <S extends I>(
 
 type JsonOutput<O> = DeepReplace<O, [string | Date, string]>
 
-type Endpoint<I, O> = (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
+export type Endpoint<I, O> = (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
   memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>
   memoRaw: RawEndpoint<I, JsonOutput<O>>
   raw: RawEndpoint<I, JsonOutput<O>>
@@ -30,7 +30,7 @@ export const getApiEndpointCreator =
     verbose: boolean
     formatGraphQL: any
   }) =>
-  <I, O>(kind: 'mutation' | 'query', name: string): Endpoint<I, O> => {
+  <I = any, O = any>(kind: 'mutation' | 'query', name: string): Endpoint<I, O> => {
     const rawEndpoint: any = async <S extends I>(
       jsonQuery?: S
     ): Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }> => {
