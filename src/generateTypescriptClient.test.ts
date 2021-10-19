@@ -16,6 +16,7 @@ describe('Generated Client', () => {
       // For the sake of checking the generated code, we'll
       // specify an output path
       output: path.resolve(__dirname, './testClient.ts'),
+      formatGraphQL: true
     })
 
     client = eval(ts.transpile(generatedCode))

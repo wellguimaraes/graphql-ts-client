@@ -292,7 +292,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       options.formatGraphQL || options.verbose
         ? `
       import { format as formatCode } from "prettier/standalone"
-      import parserGraphql from "prettier/parser-graphql"
+      import * as parserGraphql from "prettier/parser-graphql"
       
       const formatGraphQL = (query: string) => formatCode(query, {parser: 'graphql', plugins: [parserGraphql]})`
         : `
