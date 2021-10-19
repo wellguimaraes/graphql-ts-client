@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "5.2.3",
+  "version": "5.2.4",
   "description": "GraphQL Typescript Client Generator",
   "author": "Wellington Guimaraes",
   "license": "MIT",
