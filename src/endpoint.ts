@@ -2,16 +2,16 @@ import memoizee from 'memoizee'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
 import { DeepReplace, IResponseListener, Projection } from './types'
 
-type RawEndpoint<I, O> = <S extends I>(
+type RawEndpoint<I, O, E> = <S extends I>(
   jsonQuery?: S
-) => Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }>
+) => Promise<{ data: Projection<S, O, E>; errors: any[]; warnings: any[]; headers: any; status: any }>
 
-type JsonOutput<O> = DeepReplace<O, [string | Date, string]>
+type JsonOutput<O, Ignore> = DeepReplace<O, Ignore, [string | Date, string]>
 
-export type Endpoint<I, O> = (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>) & {
-  memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O>>>
-  memoRaw: RawEndpoint<I, JsonOutput<O>>
-  raw: RawEndpoint<I, JsonOutput<O>>
+export type Endpoint<I, O, E> = (<S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O, E>, E>>) & {
+  memo: <S extends I>(jsonQuery?: S) => Promise<Projection<S, JsonOutput<O, E>, E>>
+  memoRaw: RawEndpoint<I, JsonOutput<O, E>, E>
+  raw: RawEndpoint<I, JsonOutput<O, E>, E>
 }
 
 export const getApiEndpointCreator =
@@ -30,7 +30,7 @@ export const getApiEndpointCreator =
     verbose: boolean
     formatGraphQL: any
   }) =>
-  <I = any, O = any>(kind: 'mutation' | 'query', name: string): Endpoint<I, O> => {
+  <I = any, O = any, E = any>(kind: 'mutation' | 'query', name: string): Endpoint<I, O, E> => {
     const rawEndpoint: any = async <S extends I>(
       jsonQuery?: S
     ): Promise<{ data: Projection<S, O>; errors: any[]; warnings: any[]; headers: any; status: any }> => {

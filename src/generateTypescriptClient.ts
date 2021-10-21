@@ -115,7 +115,7 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', endpoint: Introspec
   const wrappedOutputType = /^(string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
   const inputType = selectionType || 'undefined'
 
-  return `${endpoint.name}: apiEndpoint('${kind}', '${endpoint.name}') as Endpoint<${inputType}, ${wrappedOutputType}>`
+  return `${endpoint.name}: apiEndpoint('${kind}', '${endpoint.name}') as Endpoint<${inputType}, ${wrappedOutputType}, AllEnums>`
 }
 
 function gqlSchemaToTypescript(
@@ -307,6 +307,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     // Enums
     ${enums.map(it => gqlSchemaToTypescript(it, { selection: false }))
       .join('\n')}
+    
+    type AllEnums = ${enums.map(it => it.name).join(' | ')}
 
     // Input/Output Types
     ${objectTypes.map(it => `

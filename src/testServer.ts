@@ -2,10 +2,17 @@ import { ApolloServer, gql } from 'apollo-server'
 
 const typeDefs = gql`
   scalar ISODate
+  
+  enum BookType {
+    IPSUM
+    DOLOR
+    SIT
+  }
 
   type Book {
     title: String
     author: String
+    type: BookType
     dateCreated: ISODate
   }
 
