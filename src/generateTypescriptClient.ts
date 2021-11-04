@@ -286,7 +286,14 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     import { DeepRequired } from 'ts-essentials'
     import { getApiEndpointCreator, Endpoint } from '${graphqlTsClientPath}/endpoint'
     import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
-    import fetch from 'cross-fetch'
+    import _fetch from 'cross-fetch'
+    
+    let fetch = _fetch
+    
+    try {
+      if (typeof window.fetch === 'function')
+        fetch = window.fetch.bind(window)
+    } catch {}
 
     ${
       options.formatGraphQL || options.verbose
