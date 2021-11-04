@@ -60,7 +60,7 @@ export const getApiEndpointCreator =
 
         const response = { data, warnings, headers, status, errors }
 
-        if (verbose) {
+        if (verbose && globalThis.document) {
           logRequest({
             ...logOptions,
             response,
@@ -79,7 +79,7 @@ export const getApiEndpointCreator =
 
         return { data: data?.[name], errors, warnings, headers, status }
       } catch (error) {
-        if (verbose) {
+        if (verbose && globalThis.document) {
           logRequest({
             ...logOptions,
             error: error as Error,
@@ -117,7 +117,7 @@ async function graphqlRequest({
   query,
   variables,
 }: {
-  client: { url: string; headers: { [p: string]: string }; fetch: any }
+  client: { url: string; headers: { [p: string]: string }; fetch: (...args: any[]) => Promise<Response> }
   query: string
   variables: { [p: string]: any }
 }) {
@@ -134,11 +134,15 @@ async function graphqlRequest({
       },
       body: JSON.stringify({ query, variables }),
     })
-    .then(async (r: any) => ({
-      data: await r.json(),
-      headers: r.headers,
-      status: r.status,
-    }))
+    .then(async (r: any) =>
+      r.ok
+        ? {
+            data: await r.json(),
+            headers: r.headers,
+            status: r.status,
+          }
+        : Promise.reject(new Error(`Request failed with status ${r.status}`))
+    )
 
   return { data, errors, warnings, headers, status }
 }
