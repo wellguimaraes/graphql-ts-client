@@ -1,6 +1,7 @@
+import axios from 'axios'
 import Case from 'case'
-import fetch from 'cross-fetch'
-import fs, { PathLike } from 'fs'
+import * as fs from 'fs'
+import { PathLike } from 'fs'
 import {
   getIntrospectionQuery,
   IntrospectionEnumType,
@@ -76,7 +77,10 @@ function gqlTypeToTypescript(
   return ''
 }
 
-function gqlFieldToTypescript(field: IntrospectionField, { isInput, selection, defaultValue }: { defaultValue?: any, isInput: boolean; selection: boolean }) {
+function gqlFieldToTypescript(
+  field: IntrospectionField,
+  { isInput, selection, defaultValue }: { defaultValue?: any; isInput: boolean; selection: boolean }
+) {
   let fieldTypeDefinition = gqlTypeToTypescript(field.type, {
     isInput,
     selection,
@@ -85,9 +89,13 @@ function gqlFieldToTypescript(field: IntrospectionField, { isInput, selection, d
   fieldTypeDefinition = `${fieldTypeDefinition}`
 
   if (selection && field.args && field.args.length) {
-    let fieldsOnArgs = field.args.map((arg) => gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false }))
+    let fieldsOnArgs = field.args.map(arg =>
+      gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false })
+    )
 
-    fieldTypeDefinition = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
+    fieldTypeDefinition = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+      .map(arg => arg.code)
+      .join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
   }
 
   const isOptional = defaultValue || selection || fieldTypeDefinition.startsWith('Maybe')
@@ -96,7 +104,7 @@ function gqlFieldToTypescript(field: IntrospectionField, { isInput, selection, d
 
   return {
     isOptional: isOptional,
-    code: `${field.name}${isOptional ? '?:' : ':'} ${wrappedType}`
+    code: `${field.name}${isOptional ? '?:' : ':'} ${wrappedType}`,
   }
 }
 
@@ -107,8 +115,12 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', endpoint: Introspec
   })
 
   if (endpoint.args && endpoint.args.length) {
-    const fieldsOnArgs = endpoint.args.map((arg) => gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false }))
-    selectionType = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
+    const fieldsOnArgs = endpoint.args.map(arg =>
+      gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false })
+    )
+    selectionType = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+      .map(arg => arg.code)
+      .join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
 
   const outputType = gqlTypeToTypescript(endpoint.type)
@@ -141,11 +153,12 @@ function gqlSchemaToTypescript(
   return `
     export interface ${gqlType.name}${selection ? 'Selection' : ''} {
       ${fields
-        .map((_: any) =>
-          gqlFieldToTypescript(_, {
-            isInput: gqlType.kind === 'INPUT_OBJECT',
-            selection,
-          }).code
+        .map(
+          (_: any) =>
+            gqlFieldToTypescript(_, {
+              isInput: gqlType.kind === 'INPUT_OBJECT',
+              selection,
+            }).code
         )
         .join(',\n  ')}
     }`
@@ -267,7 +280,9 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   const queries = (<IntrospectionObjectType>types.find(it => it.name === 'Query'))?.fields || []
   const mutations = (<IntrospectionObjectType>types.find(it => it.name === 'Mutation'))?.fields || []
   const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
-  const scalars = types.filter(it => it.kind === 'SCALAR' && !/decimal|int|float|string|long|boolean/i.test(it.name)) as IntrospectionEnumType[]
+  const scalars = types.filter(
+    it => it.kind === 'SCALAR' && !/decimal|int|float|string|long|boolean/i.test(it.name)
+  ) as IntrospectionEnumType[]
   const objectTypes = types.filter(it => ['OBJECT', 'INPUT_OBJECT'].includes(it.kind) && !it.name.startsWith('__')) as (
     | IntrospectionObjectType
     | IntrospectionInputObjectType
@@ -286,15 +301,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     import { DeepRequired } from 'ts-essentials'
     import { getApiEndpointCreator, Endpoint } from '${graphqlTsClientPath}/endpoint'
     import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
-    import _fetch from 'cross-fetch'
     
-    let fetch = _fetch
-    
-    try {
-      if (typeof window.fetch === 'function')
-        fetch = window.fetch.bind(window)
-    } catch {}
-
     ${
       options.formatGraphQL || options.verbose
         ? `
@@ -308,26 +315,26 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 
     // Scalars
     export type IDate = string | Date
-    ${scalars.map(it => gqlSchemaToTypescript(it, { selection: false }))
-      .join('\n')}
+    ${scalars.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
 
     // Enums
-    ${enums.map(it => gqlSchemaToTypescript(it, { selection: false }))
-      .join('\n')}
+    ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     
     type AllEnums = ${enums.map(it => it.name).join(' | ')}
 
     // Input/Output Types
-    ${objectTypes.map(it => `
+    ${objectTypes
+      .map(
+        it => `
     /**
      * @deprecated Avoid directly using this interface. Instead, create a type alias based on the query/mutation return type.
      */
-    ${gqlSchemaToTypescript(it, { selection: false })}`)
-    .join('\n')}
+    ${gqlSchemaToTypescript(it, { selection: false })}`
+      )
+      .join('\n')}
 
     // Selection Types
-    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true }))
-      .join('\n')}
+    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
 
     // Schema Resolution Tree
     ${getTypesTreeCode(forInputExtraction)}
@@ -337,7 +344,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     let url = '${options.endpoint}'
     let responseListeners: IResponseListener[] = []
     let apiEndpoint = getApiEndpointCreator({
-      getClient: () => ({ url, headers, fetch }),
+      getClient: () => ({ url, headers }),
       responseListeners,
       maxAge: 30000,
       verbose,
@@ -359,8 +366,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
         ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
       },
       mutations: {
-        ${mutations.map(q => gqlEndpointToTypescript('mutation', q))
-          .join(',\n  ')}
+        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
       }
     }
 
@@ -372,15 +378,21 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<string> {
   try {
     const {
-      data: { __schema: { types } },
-    } = (await fetch(options.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
+      data: {
+        data: {
+          __schema: { types },
+        },
       },
-      body: JSON.stringify({ query: getIntrospectionQuery() }),
-    }).then(async (r: any) => r.json()))
+    } = await axios.post(
+      options.endpoint,
+      { query: getIntrospectionQuery() },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      }
+    )
 
     const formattedClientCode = generateClientCode(types, options)
 

@@ -2,7 +2,7 @@ import { ApolloServer, gql } from 'apollo-server'
 
 const typeDefs = gql`
   scalar ISODate
-  
+
   enum BookType {
     IPSUM
     DOLOR
@@ -19,7 +19,7 @@ const typeDefs = gql`
   input BookSearchParamsAllOptional {
     title: String
     author: String
-    createdAfter: ISODate 
+    createdAfter: ISODate
   }
 
   input BookSearchParamsSomeRequired {
@@ -30,6 +30,7 @@ const typeDefs = gql`
   type Query {
     booksWithOptionalParams(params: BookSearchParamsAllOptional! = {}): [Book]
     booksWithRequiredParams(params: BookSearchParamsSomeRequired!): [Book]
+    failingQuery(id: String!): String
   }
 `
 
@@ -54,9 +55,21 @@ const resolvers = {
   Query: {
     booksWithOptionalParams: (_: any, { params = {} }: { params: { title?: string; author?: string } }) => filterBooks(params),
     booksWithRequiredParams: (_: any, { params }: { params: { title: string; author?: string } }) => filterBooks(params),
+    failingQuery: () => {
+      throw new Error('Failed')
+    },
   },
 }
 
-const testServer = new ApolloServer({ typeDefs, resolvers })
+const testServer = new ApolloServer({
+  typeDefs,
+  resolvers,
+  formatResponse: response => {
+    if (response?.errors?.length) {
+      response.http!.status = 500
+    }
+    return response
+  },
+})
 
 export const startServer = () => testServer.listen(4123).then(({ url }) => ({ url, server: testServer }))

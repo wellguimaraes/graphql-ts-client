@@ -1,3 +1,4 @@
+import axios from 'axios'
 import memoizee from 'memoizee'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
 import { DeepReplace, IResponseListener, Projection } from './types'
@@ -23,7 +24,7 @@ export const getApiEndpointCreator =
     formatGraphQL,
     responseListeners,
   }: {
-    getClient: () => { url: string; headers: { [key: string]: string }; fetch: (...args: any[]) => any }
+    getClient: () => { url: string; headers: { [key: string]: string } }
     responseListeners: IResponseListener[]
     typesTree: any
     maxAge: number
@@ -117,7 +118,7 @@ async function graphqlRequest({
   query,
   variables,
 }: {
-  client: { url: string; headers: { [p: string]: string }; fetch: (...args: any[]) => Promise<Response> }
+  client: { url: string; headers: { [p: string]: string } }
   query: string
   variables: { [p: string]: any }
 }) {
@@ -125,23 +126,16 @@ async function graphqlRequest({
     data: { data, errors, warnings },
     headers,
     status,
-  } = await client
-    .fetch(client.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...client.headers,
-      },
-      body: JSON.stringify({ query, variables }),
-    })
-    .then(async (r: any) =>
-      r.ok
-        ? {
-            data: await r.json(),
-            headers: r.headers,
-            status: r.status,
-          }
-        : Promise.reject(new Error(`Request failed with status ${r.status}`))
+  } = await axios
+    .post(
+      client.url,
+      { query, variables },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...client.headers,
+        },
+      }
     )
 
   return { data, errors, warnings, headers, status }

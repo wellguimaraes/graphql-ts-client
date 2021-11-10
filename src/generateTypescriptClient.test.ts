@@ -16,7 +16,7 @@ describe('Generated Client', () => {
       // For the sake of checking the generated code, we'll
       // specify an output path
       output: path.resolve(__dirname, './testClient.ts'),
-      formatGraphQL: true
+      formatGraphQL: true,
     })
 
     client = eval(ts.transpile(generatedCode))
@@ -35,5 +35,30 @@ describe('Generated Client', () => {
     expect(books[0]).toHaveProperty('author')
   })
 
-  // TODO: create more functionality tests for generated client
+  it('should be able to make queries with optional args, not passing args obj', async () => {
+    const books = await client.queries.booksWithOptionalParams({
+      title: true,
+      author: true,
+    })
+
+    expect(books).toHaveLength(2)
+    expect(books[0]).toHaveProperty('title')
+    expect(books[0]).toHaveProperty('author')
+  })
+
+  it('fail with broken queries', async () => {
+    const result = await client.queries.failingQuery
+      .raw({
+        __args: {
+          id: 'hello',
+        },
+      })
+      .then(
+        () => 'success',
+        (err: any) => err
+      )
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe('Request failed with status code 500')
+  })
 })
