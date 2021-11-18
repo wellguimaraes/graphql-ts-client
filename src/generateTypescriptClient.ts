@@ -362,11 +362,15 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
         headers = newHeaders
       },
       setUrl: (_url: string) => url = _url,
+      // @ts-ignore
       queries: {
-        ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n  ')}
+        // @ts-ignore
+        ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n// @ts-ignore\n')}
       },
+      // @ts-ignore
       mutations: {
-        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n  ')}
+        // @ts-ignore
+        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n// @ts-ignore\n')}
       }
     }
 
