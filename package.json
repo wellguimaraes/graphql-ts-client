@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "6.2.0",
+  "version": "6.3.0",
   "description": "GraphQL Typescript Client Generator",
   "author": "Wellington Guimaraes",
   "license": "MIT",
@@ -58,13 +58,13 @@
     }
   ],
   "dependencies": {
+    "axios": "^0.24.0",
     "case": "^1.6.3",
     "graphql": "^15.6.0",
     "lodash": "^4.17.21",
     "memoizee": "^0.4.15",
     "prettier": "^2.4.1",
-    "ts-essentials": "^8.1.0",
-    "axios": "^0.24.0"
+    "ts-essentials": "^8.1.0"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^5.0.4",
