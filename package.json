@@ -26,7 +26,6 @@
     "build": "tsdx build --entry src/index.ts --entry src/endpoint.ts",
     "test": "cross-env GQL_CLIENT_DIST_PATH='.' tsdx test",
     "lint": "tsdx lint",
-    "prepare": "yarn build",
     "prepublishOnly": "yarn build",
     "size": "size-limit",
     "analyze": "size-limit --why"
@@ -64,7 +63,8 @@
     "lodash": "^4.17.21",
     "memoizee": "^0.4.15",
     "prettier": "^2.4.1",
-    "ts-essentials": "^8.1.0"
+    "ts-essentials": "^8.1.0",
+    "esbuild": "^0.13.14"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^5.0.4",

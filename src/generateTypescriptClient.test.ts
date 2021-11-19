@@ -1,6 +1,5 @@
 import { ApolloServer } from 'apollo-server'
 import * as path from 'path'
-import * as ts from 'typescript'
 import { generateTypescriptClient } from './generateTypescriptClient'
 import { startServer } from './testServer'
 
@@ -11,15 +10,16 @@ describe('Generated Client', () => {
   beforeAll(async () => {
     testServer = await startServer()
 
-    const generatedCode = await generateTypescriptClient({
+    const { js } = await generateTypescriptClient({
       endpoint: `${testServer.url}/graphql`,
+      clientName: 'myApiClient',
       // For the sake of checking the generated code, we'll
       // specify an output path
       output: path.resolve(__dirname, './testClient.ts'),
       formatGraphQL: true,
     })
 
-    client = eval(ts.transpile(generatedCode))
+    client = eval(`${js};myApiClient`)
   })
 
   afterAll(async () => await testServer.server.stop())

@@ -15,6 +15,7 @@ import {
 import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
 import * as prettier from 'prettier'
+import * as esbuild from 'esbuild'
 
 const graphqlTsClientPath = process.env.GQL_CLIENT_DIST_PATH || 'graphql-ts-client/dist'
 
@@ -108,7 +109,7 @@ function gqlFieldToTypescript(
   }
 }
 
-function gqlEndpointToTypescript(kind: 'mutation' | 'query', endpoint: IntrospectionField): string {
+function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionField, codeOutputType: 'ts' | 'js'): string {
   let selectionType = gqlTypeToTypescript(endpoint.type, {
     isInput: false,
     selection: true,
@@ -127,30 +128,37 @@ function gqlEndpointToTypescript(kind: 'mutation' | 'query', endpoint: Introspec
   const wrappedOutputType = /^(string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
   const inputType = selectionType || 'undefined'
 
-  return `${endpoint.name}: apiEndpoint('${kind}', '${endpoint.name}') as Endpoint<${inputType}, ${wrappedOutputType}, AllEnums>`
+  return codeOutputType === 'ts'
+    ? `${endpoint.name}: Endpoint<${inputType}, ${wrappedOutputType}, AllEnums>`
+    : `${endpoint.name}: apiEndpoint('${kind}', '${endpoint.name}')`
 }
 
-function gqlSchemaToTypescript(
+function gqlSchemaToCode(
   gqlType: any | IntrospectionObjectType | IntrospectionInputObjectType | IntrospectionEnumType,
-  { selection = false }
+  { selection = false, outputType }: { selection: boolean; outputType: 'js' | 'ts' }
 ) {
   const rawKind = gqlType.kind || gqlType.type
 
   if (rawKind === 'SCALAR') {
-    return `export type ${gqlType.name} = ${/date/i.test(gqlType.name) ? 'IDate' : 'string'}`
+    return outputType === 'ts' ? `export declare type ${gqlType.name} = ${/date/i.test(gqlType.name) ? 'IDate' : 'string'}` : ''
   }
 
   if (rawKind === 'ENUM')
-    return `
-      export enum ${gqlType.name} {
+    return outputType === 'ts'
+      ? `
+      export declare enum ${gqlType.name} {
         ${orderBy(gqlType.enumValues, 'name')
           .map((_: any) => `${Case.camel(_.name)} = '${_.name}'`)
           .join(',\n  ')}
       }`
+      : `export const ${gqlType.name} = {${orderBy(gqlType.enumValues, 'name')
+          .map((_: any) => `${Case.camel(_.name)}: '${_.name}'`)
+          .join(',\n  ')}}`
 
   const fields = (gqlType.fields && gqlType.fields) || (gqlType.inputFields && gqlType.inputFields) || []
 
-  return `
+  return outputType === 'ts'
+    ? `
     export interface ${gqlType.name}${selection ? 'Selection' : ''} {
       ${fields
         .map(
@@ -162,6 +170,7 @@ function gqlSchemaToTypescript(
         )
         .join(',\n  ')}
     }`
+    : ''
 }
 
 function getGraphQLInputType(type: IntrospectionInputTypeRef): string {
@@ -242,7 +251,7 @@ function getTypesTreeCode(types: IntrospectionObjectType[]) {
                 : ''
 
               return fieldsCode || argsCode
-                ? `get ${k}(): any {
+                ? `get ${k}() {
                   return {
                     ${fieldsCode}
                     ${argsCode}
@@ -294,55 +303,32 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 
   const clientName = options.clientName || 'client'
 
-  // language=TypeScript
-  const clientCode = `
+  // language=JavaScript
+  const jsCode = `
     // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols
-    
-    import { DeepRequired } from 'ts-essentials'
-    import { getApiEndpointCreator, Endpoint } from '${graphqlTsClientPath}/endpoint'
-    import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
+    import { getApiEndpointCreator } from '${graphqlTsClientPath}/endpoint'
     
     ${
       options.formatGraphQL || options.verbose
         ? `
       import { format as formatCode } from "prettier/standalone"
-      import * as parserGraphql from "prettier/parser-graphql"
+      import parserGraphql from "prettier/parser-graphql"
       
-      const formatGraphQL = (query: string) => formatCode(query, {parser: 'graphql', plugins: [parserGraphql]})`
+      const formatGraphQL = (query) => formatCode(query, {parser: 'graphql', plugins: [parserGraphql]})`
         : `
-      const formatGraphQL = (query: string) => query`
+      const formatGraphQL = (query) => query`
     }
-
-    // Scalars
-    export type IDate = string | Date
-    ${scalars.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
-
-    // Enums
-    ${enums.map(it => gqlSchemaToTypescript(it, { selection: false })).join('\n')}
     
-    type AllEnums = ${enums.map(it => it.name).join(' | ')}
-
-    // Input/Output Types
-    ${objectTypes
-      .map(
-        it => `
-    /**
-     * @deprecated Avoid directly using this interface. Instead, create a type alias based on the query/mutation return type.
-     */
-    ${gqlSchemaToTypescript(it, { selection: false })}`
-      )
-      .join('\n')}
-
-    // Selection Types
-    ${objectTypes.map(it => gqlSchemaToTypescript(it, { selection: true })).join('\n')}
+    // Enums
+    ${enums.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'js' })).join('\n')}
 
     // Schema Resolution Tree
     ${getTypesTreeCode(forInputExtraction)}
 
     let verbose = ${Boolean(options.verbose)}
-    let headers = {} as any
+    let headers = {}
     let url = '${options.endpoint}'
-    let responseListeners: IResponseListener[] = []
+    let responseListeners = []
     let apiEndpoint = getApiEndpointCreator({
       getClient: () => ({ url, headers }),
       responseListeners,
@@ -353,33 +339,78 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     })
 
     export const ${clientName} = {
-      addResponseListener: (listener: IResponseListener) => responseListeners.push(
+      addResponseListener: (listener) => responseListeners.push(
         listener),
-      setHeader: (key: string, value: string) => {
+      setHeader: (key, value) => {
         headers[key] = value
       },
-      setHeaders: (newHeaders: { [k: string]: string }) => {
+      setHeaders: (newHeaders) => {
         headers = newHeaders
       },
-      setUrl: (_url: string) => url = _url,
-      // @ts-ignore
+      setUrl: (_url) => url = _url,
       queries: {
-        // @ts-ignore
-        ${queries.map(q => gqlEndpointToTypescript('query', q)).join(',\n// @ts-ignore\n')}
+        ${queries.map(query => gqlEndpointToCode('query', query, 'js')).join(',\n')}
       },
-      // @ts-ignore
       mutations: {
-        // @ts-ignore
-        ${mutations.map(q => gqlEndpointToTypescript('mutation', q)).join(',\n// @ts-ignore\n')}
+        ${mutations.map(mutation => gqlEndpointToCode('mutation', mutation, 'js')).join(',\n')}
       }
     }
 
     export default ${clientName}`
 
-  return prettier.format(clientCode, { semi: false, parser: 'typescript' })
+  // language=TypeScript
+  const typingsCode = `
+    // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols
+    
+    import { DeepRequired } from 'ts-essentials'
+    import { Endpoint } from '${graphqlTsClientPath}/endpoint'
+    import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
+
+    // Scalars
+    export type IDate = string | Date
+    ${scalars.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'ts' })).join('\n')}
+
+    // Enums
+    ${enums.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'ts' })).join('\n')}
+    
+    type AllEnums = ${enums.map(it => it.name).join(' | ')}
+
+    // Input/Output Types
+    ${objectTypes
+      .map(
+        it => `
+    /**
+     * @deprecated Avoid directly using this interface. Instead, create a type alias based on the query/mutation return type.
+     */
+    ${gqlSchemaToCode(it, { selection: false, outputType: 'ts' })}`
+      )
+      .join('\n')}
+
+    // Selection Types
+    ${objectTypes.map(it => gqlSchemaToCode(it, { selection: true, outputType: 'ts' })).join('\n')}
+    
+    export declare const ${clientName}: {
+      addResponseListener: (listener: IResponseListener) => void
+      setHeader: (key: string, value: string) => void
+      setHeaders: (newHeaders: { [k: string]: string }) => void,
+      setUrl: (_url: string) => void,
+      queries: {
+        ${queries.map(q => gqlEndpointToCode('query', q, 'ts')).join(',\n')}
+      },
+      mutations: {
+        ${mutations.map(q => gqlEndpointToCode('mutation', q, 'ts')).join(',\n')}
+      }
+    }
+
+    export default ${clientName}`
+
+  return {
+    js: esbuild.transformSync(jsCode, { format: 'cjs', loader: 'js' }).code,
+    typings: prettier.format(typingsCode, { semi: false, parser: 'typescript' }),
+  }
 }
 
-export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<string> {
+export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string, js: string }> {
   try {
     const {
       data: {
@@ -398,13 +429,14 @@ export async function generateTypescriptClient({ output, ...options }: IClientOp
       }
     )
 
-    const formattedClientCode = generateClientCode(types, options)
+    const { js, typings } = generateClientCode(types, options)
 
-    if (output) {
-      fs.writeFileSync(output, formattedClientCode, { encoding: 'utf8' })
+    if (output && typeof output === 'string') {
+      fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.d.ts'), typings, { encoding: 'utf8' })
+      fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.js'), js, { encoding: 'utf8' })
     }
 
-    return formattedClientCode
+    return { js, typings }
   } catch (e) {
     console.error('\nThe GraphQL introspection request failed\n')
     console.error((e as any).response || e)
