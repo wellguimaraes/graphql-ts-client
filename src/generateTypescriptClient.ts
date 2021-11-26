@@ -16,6 +16,7 @@ import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
 import * as prettier from 'prettier'
 import * as esbuild from 'esbuild'
+import path from 'path'
 
 const graphqlTsClientPath = process.env.GQL_CLIENT_DIST_PATH || 'graphql-ts-client/dist'
 
@@ -410,37 +411,40 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   }
 }
 
-export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string, js: string }> {
-  try {
-    const {
+export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
+  const {
+    data: {
       data: {
-        data: {
-          __schema: { types },
-        },
+        __schema: { types },
       },
-    } = await axios.post(
+    },
+  } = await axios
+    .post(
       options.endpoint,
       { query: getIntrospectionQuery() },
-      {
-        headers: {
+      {        headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
       }
     )
+    .catch(() => {
+      console.error('\nThe GraphQL introspection request failed\n')
+      process.exit(1)
+    })
 
-    const { js, typings } = generateClientCode(types, options)
+  const { js, typings } = generateClientCode(types, options)
 
-    if (output && typeof output === 'string') {
-      fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.d.ts'), typings, { encoding: 'utf8' })
-      fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.js'), js, { encoding: 'utf8' })
+  if (output && typeof output === 'string') {
+    const outputDir = path.dirname(output)
+
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
     }
 
-    return { js, typings }
-  } catch (e) {
-    console.error('\nThe GraphQL introspection request failed\n')
-    console.error((e as any).response || e)
-
-    throw e
+    fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.d.ts'), typings, { encoding: 'utf8' })
+    fs.writeFileSync(output.replace(/(\.(ts|js))?$/, '.js'), js, { encoding: 'utf8' })
   }
+
+  return { js, typings }
 }
