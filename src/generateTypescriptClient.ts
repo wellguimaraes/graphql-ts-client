@@ -28,7 +28,6 @@ function gqlScalarToTypescript(gqlType: string) {
   return gqlType
 }
 
-// TODO: separate in two: input and output types
 function gqlTypeToTypescript(
   gqlType: IntrospectionOutputTypeRef,
   { required = false, isInput = false, selection = false } = {}
@@ -125,7 +124,7 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
       .join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
 
-  const outputType = gqlTypeToTypescript(endpoint.type)
+  const outputType = gqlTypeToTypescript(endpoint.type, { required: true })
   const wrappedOutputType = /^(string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
   const inputType = selectionType || 'undefined'
 
