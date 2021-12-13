@@ -3,6 +3,7 @@
 Generate fully typed Typescript clients for your GraphQL APIs.
 
 ## Install
+
 ```
 yarn add graphql-ts-client
 ```
@@ -27,14 +28,31 @@ generateTypescriptClient({
 ### Using the generated client
 
 ```typescript
-import myAwesomeApi, { AssetType, Granularity, OnBoardingStage } from './myAwesomeApi'
+import { myAwesomeApi, AssetType, Granularity, OnBoardingStage } from './myAwesomeApi'
 
 async function somewhereOverTheRainbow() {
   // Set an specific header if needed
   myAwesomeApi.setHeader('Authorization', 'Bearer 010101010101')
+  
+  // You can also change the API url
   myAwesomeApi.setUrl('https://my-runtime-url.com/graphql')
-
+  
+  // And configure how retrials should work
+  myAwesomeApi.setRetryConfig({
+    max: 3,
+    before: ({ queryName, query, variables, response }) => {
+      // do something before retrying
+    },
+  })
+  
+  // Adding response listeners is also possible
+  myAwesomeApi.addResponseListener(({ queryName, query, variables, response }) => {
+    // do something whenever a request is responded
+  })
+  
   const response = await myAwesomeApi.queries.globalIndicators({
+    // Optionally you can define an alias for this request
+    __alias: 'myCustomGlobalIndicators',
     __args: {
       liveStatus: OnBoardingStage.COMPLETED,
       assetType: AssetType.LEASED,
@@ -49,7 +67,7 @@ async function somewhereOverTheRainbow() {
       },
     },
     lorem: true, // selected field
-    ipsum: true  // selected field
+    ipsum: true, // selected field
   })
 
   console.log(response.customerExperience.avgRating)

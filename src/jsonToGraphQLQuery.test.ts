@@ -14,7 +14,7 @@ describe('jsonToGraphQLQuery', () => {
 
     const response = jsonToGraphQLQuery({
       kind: 'query',
-      name: 'testing',
+      queryName: 'testing',
       jsonQuery,
       typesTree: {
         Query: {
@@ -44,7 +44,7 @@ describe('jsonToGraphQLQuery', () => {
 
     const response = jsonToGraphQLQuery({
       kind: 'query',
-      name: 'testing',
+      queryName: 'testing',
       jsonQuery,
       typesTree: {
         Query: {

@@ -1,3 +1,5 @@
+import { omit } from 'lodash'
+
 const VAR_PREFIX = '@@VAR@@'
 const VAR_PREFIX_LENGTH = VAR_PREFIX.length
 
@@ -7,32 +9,34 @@ const cloneDeep = require('lodash/cloneDeep')
 
 export function jsonToGraphQLQuery({
   kind,
-  name,
+  queryName,
   jsonQuery = {},
   typesTree,
 }: {
   kind: 'query' | 'mutation'
-  name: string
+  queryName: string
   jsonQuery: any
   typesTree: any
 }) {
   const variablesData = {} as any
-
-  const newJsonQuery = cloneDeep(jsonQuery)
+  const alias = jsonQuery.__alias
+  const newJsonQuery = cloneDeep(omit(jsonQuery, '__alias'))
 
   extractVariables({
-    jsonQuery: { [name]: newJsonQuery },
+    jsonQuery: { [queryName]: newJsonQuery },
     variables: variablesData,
     parentType: kind === 'query' ? typesTree.Query : typesTree.Mutation,
   })
 
   const variablesQuery = Object.keys(variablesData).length
     ? `(${entries(variablesData)
-        .map(([name, { type }]: any) => `$${name}: ${type}`)
+        .map(([queryName, { type }]: any) => `$${queryName}: ${type}`)
         .join(', ')})`
     : ''
 
-  const query = `${kind} ${name}${variablesQuery} { ${name}${toGraphql(newJsonQuery)} }`
+  const query = `${kind} ${alias || queryName}${variablesQuery} { ${alias ? `${alias}:` : ''}${queryName}${toGraphql(
+    newJsonQuery
+  )} }`
   const variables = fromEntries(entries(variablesData).map(([k, v]: any) => [k, v.value]))
 
   return {
@@ -48,9 +52,7 @@ function extractVariables({ jsonQuery, variables, parentType }: { jsonQuery: any
     Object.keys(jsonQuery.__args).forEach(k => {
       if (typeof jsonQuery.__args[k] === 'string' && jsonQuery.__args[k].startsWith(VAR_PREFIX)) return
 
-      const variableName = `${k}_${Math.random()
-        .toString(36)
-        .substr(2, 4)}`
+      const variableName = `${k}_${Math.random().toString(36).substr(2, 4)}`
 
       if (jsonQuery.__args[k] !== undefined) {
         variables[variableName] = {

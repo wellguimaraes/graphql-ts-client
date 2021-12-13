@@ -91,17 +91,21 @@ function gqlFieldToTypescript(
 
   if (selection && field.args && field.args.length) {
     let fieldsOnArgs = field.args.map(arg =>
-      gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false })
+      gqlFieldToTypescript(arg as unknown as IntrospectionField, {
+        defaultValue: arg.defaultValue,
+        isInput: true,
+        selection: false,
+      })
     )
 
-    fieldTypeDefinition = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+    fieldTypeDefinition = `{ __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
       .map(arg => arg.code)
       .join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
   }
 
   const isOptional = defaultValue || selection || fieldTypeDefinition.startsWith('Maybe')
   const rawType = fieldTypeDefinition || (selection && 'boolean')
-  const wrappedType = isOptional ? (rawType as string).replace(/Maybe\<(.+?)\>/, '$1') : rawType
+  const wrappedType = isOptional ? (rawType as string).replace(/Maybe<(.+?)>/, '$1') : rawType
 
   return {
     isOptional: isOptional,
@@ -117,9 +121,13 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
 
   if (endpoint.args && endpoint.args.length) {
     const fieldsOnArgs = endpoint.args.map(arg =>
-      gqlFieldToTypescript(arg as IntrospectionField, { defaultValue: arg.defaultValue, isInput: true, selection: false })
+      gqlFieldToTypescript(arg as unknown as IntrospectionField, {
+        defaultValue: arg.defaultValue,
+        isInput: true,
+        selection: false,
+      })
     )
-    selectionType = `{ __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+    selectionType = `{ __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
       .map(arg => arg.code)
       .join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
@@ -328,9 +336,14 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     let verbose = ${Boolean(options.verbose)}
     let headers = {}
     let url = '${options.endpoint}'
+    let retryConfig = {
+      max: 0,
+      before: undefined
+    }
     let responseListeners = []
+    // noinspection JSUnusedLocalSymbols
     let apiEndpoint = getApiEndpointCreator({
-      getClient: () => ({ url, headers }),
+      getClient: () => ({ url, headers, retryConfig }),
       responseListeners,
       maxAge: 30000,
       verbose,
@@ -346,6 +359,16 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       },
       setHeaders: (newHeaders) => {
         headers = newHeaders
+      },
+      setRetryConfig: (options) => {
+        if (!Number.isInteger(options.max) || options.max < 0) {
+          throw new Error('retryOptions.max should be a non-negative integer')
+        }
+        
+        retryConfig = { 
+          max: options.max, 
+          before: options.before 
+        }
       },
       setUrl: (_url) => url = _url,
       queries: {
@@ -363,8 +386,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols
     
     import { DeepRequired } from 'ts-essentials'
-    import { Endpoint } from '${graphqlTsClientPath}/endpoint'
-    import { Maybe, IResponseListener } from '${graphqlTsClientPath}/types'
+    import { Maybe, IResponseListener, Endpoint } from '${graphqlTsClientPath}/types'
 
     // Scalars
     export type IDate = string | Date
@@ -393,7 +415,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       addResponseListener: (listener: IResponseListener) => void
       setHeader: (key: string, value: string) => void
       setHeaders: (newHeaders: { [k: string]: string }) => void,
-      setUrl: (_url: string) => void,
+      setUrl: (url: string) => void,
+      setRetryConfig: (options: { max: number, before?: IResponseListener }) => void
       queries: {
         ${queries.map(q => gqlEndpointToCode('query', q, 'ts')).join(',\n')}
       },
@@ -421,7 +444,8 @@ export async function generateTypescriptClient({ output, ...options }: IClientOp
     .post(
       options.endpoint,
       { query: getIntrospectionQuery() },
-      {        headers: {
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },

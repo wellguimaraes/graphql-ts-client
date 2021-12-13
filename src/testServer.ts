@@ -56,20 +56,14 @@ const resolvers = {
     booksWithOptionalParams: (_: any, { params = {} }: { params: { title?: string; author?: string } }) => filterBooks(params),
     booksWithRequiredParams: (_: any, { params }: { params: { title: string; author?: string } }) => filterBooks(params),
     failingQuery: () => {
-      throw new Error('Failed')
+      throw new Error('Failed lorem ipsum dolor')
     },
   },
 }
 
 const testServer = new ApolloServer({
   typeDefs,
-  resolvers,
-  formatResponse: response => {
-    if (response?.errors?.length) {
-      response.http!.status = 500
-    }
-    return response
-  },
+  resolvers
 })
 
 export const startServer = () => testServer.listen(4123).then(({ url }) => ({ url, server: testServer }))
