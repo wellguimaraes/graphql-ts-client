@@ -23,7 +23,7 @@ export const getApiEndpointCreator =
       headers: any
       status: any
     }> => {
-      const alias = (jsonQuery as any).__alias || queryName
+      const alias = (jsonQuery as any)?.__alias ?? queryName
       const { query, variables } = jsonToGraphQLQuery({ kind, queryName, jsonQuery, typesTree: apiConfig.typesTree })
       const start = +new Date()
 
