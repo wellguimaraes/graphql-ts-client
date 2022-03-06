@@ -62,6 +62,7 @@ export type ClientConfig = {
   }
   retryConfig: {
     max: number
+    waitBeforeRetry?: number
     before: IResponseListener
   }
 }

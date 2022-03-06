@@ -98,7 +98,7 @@ function gqlFieldToTypescript(
       })
     )
 
-    fieldTypeDefinition = `{ __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+    fieldTypeDefinition = `{ __retry?: boolean; __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
       .map(arg => arg.code)
       .join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
   }
@@ -127,7 +127,7 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
         selection: false,
       })
     )
-    selectionType = `{ __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
+    selectionType = `{ __retry?: boolean; __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
       .map(arg => arg.code)
       .join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
@@ -338,7 +338,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     let url = '${options.endpoint}'
     let retryConfig = {
       max: 0,
-      before: undefined
+      before: undefined,
+      waitBeforeRetry: 0
     }
     let responseListeners = []
     // noinspection JSUnusedLocalSymbols
@@ -366,7 +367,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
         }
         
         retryConfig = { 
-          max: options.max, 
+          max: options.max,
+          waitBeforeRetry: options.waitBeforeRetry,
           before: options.before 
         }
       },
@@ -416,7 +418,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       setHeader: (key: string, value: string) => void
       setHeaders: (newHeaders: { [k: string]: string }) => void,
       setUrl: (url: string) => void,
-      setRetryConfig: (options: { max: number, before?: IResponseListener }) => void
+      setRetryConfig: (options: { max: number, waitBeforeRetry?: number, before?: IResponseListener }) => void
       queries: {
         ${queries.map(q => gqlEndpointToCode('query', q, 'ts')).join(',\n')}
       },

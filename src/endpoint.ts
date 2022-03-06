@@ -1,4 +1,4 @@
-import memoizee from 'memoizee'
+import memoize from 'moize'
 import { graphqlRequest } from './graphqlRequest'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
 import { logRequest } from './logging'
@@ -15,6 +15,7 @@ export const getApiEndpointCreator =
   }) =>
   <I = any, O = any, E = any>(kind: 'mutation' | 'query', queryName: string): Endpoint<I, O, E> => {
     const rawEndpoint: any = async <S extends I>(
+      failureMode: 'loud' | 'silent',
       jsonQuery?: S
     ): Promise<{
       data: Projection<S, O>
@@ -24,6 +25,7 @@ export const getApiEndpointCreator =
       status: any
     }> => {
       const alias = (jsonQuery as any)?.__alias ?? queryName
+      const shouldRetry = (jsonQuery as any)?.__retry ?? true
       const { query, variables } = jsonToGraphQLQuery({ kind, queryName, jsonQuery, typesTree: apiConfig.typesTree })
       const start = +new Date()
 
@@ -43,6 +45,8 @@ export const getApiEndpointCreator =
 
       try {
         const { data, errors, warnings, headers, status } = await graphqlRequest({
+          shouldRetry,
+          failureMode,
           queryName: alias,
           client: apiConfig.getClient(),
           query,
@@ -85,18 +89,18 @@ export const getApiEndpointCreator =
     }
 
     const endpoint: any = async <S extends I>(jsonQuery?: S): Promise<Projection<S, O>> => {
-      const { data } = await rawEndpoint(jsonQuery)
+      const { data } = await rawEndpoint('loud', jsonQuery)
       return data
     }
 
     const memoizeeOptions = {
       maxAge: apiConfig.maxAge,
-      normalizer: (args: any) => JSON.stringify(args[0]),
+      isSerialized: true,
     }
 
-    endpoint.raw = rawEndpoint
-    endpoint.memo = memoizee(endpoint, memoizeeOptions)
-    endpoint.memoRaw = memoizee(rawEndpoint, memoizeeOptions)
+    endpoint.raw = rawEndpoint.bind(null, 'silent')
+    endpoint.memo = memoize(endpoint, memoizeeOptions)
+    endpoint.memoRaw = memoize(endpoint.raw, memoizeeOptions)
 
     return endpoint
   }

@@ -53,8 +53,8 @@ describe('Generated Client', () => {
   })
 
   it('fail with broken queries', async () => {
-    const result = await client.queries.failingQuery
-      .raw({
+    const result = await client.queries
+      .failingQuery({
         __args: {
           id: 'hello',
         },
@@ -66,5 +66,17 @@ describe('Generated Client', () => {
 
     expect(result).toBeInstanceOf(GraphQLClientError)
     expect(result.message).toBe('Failed lorem ipsum dolor')
+  })
+
+  it('does not fail with broken queries when using raw requests', async () => {
+    const result = await client.queries.failingQuery.raw({
+      __args: {
+        id: 'hello',
+      },
+    })
+
+    expect(result.status).toBe(200)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0].message).toBe('Failed lorem ipsum dolor')
   })
 })
