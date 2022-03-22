@@ -1,5 +1,7 @@
 import axios from 'axios'
+import axiosRetry from 'axios-retry'
 import Case from 'case'
+import * as esbuild from 'esbuild'
 import * as fs from 'fs'
 import { PathLike } from 'fs'
 import {
@@ -14,9 +16,8 @@ import {
 } from 'graphql'
 import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
-import * as prettier from 'prettier'
-import * as esbuild from 'esbuild'
 import path from 'path'
+import * as prettier from 'prettier'
 
 const graphqlTsClientPath = process.env.GQL_CLIENT_DIST_PATH || 'graphql-ts-client/dist'
 
@@ -98,9 +99,9 @@ function gqlFieldToTypescript(
       })
     )
 
-    fieldTypeDefinition = `{ __retry?: boolean; __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
-      .map(arg => arg.code)
-      .join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
+    fieldTypeDefinition = `{ __retry?: boolean; __alias?: string; __args${
+      fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''
+    }: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
   }
 
   const isOptional = defaultValue || selection || fieldTypeDefinition.startsWith('Maybe')
@@ -127,9 +128,9 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
         selection: false,
       })
     )
-    selectionType = `{ __retry?: boolean; __alias?: string; __args${fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''}: { ${fieldsOnArgs
-      .map(arg => arg.code)
-      .join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
+    selectionType = `{ __retry?: boolean; __alias?: string; __args${
+      fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''
+    }: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
 
   const outputType = gqlTypeToTypescript(endpoint.type, { required: true })
@@ -436,6 +437,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 }
 
 export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
+  axiosRetry(axios, { retries: 5, retryDelay: retryCount => 1000 * 2 ** retryCount })
+
   const {
     data: {
       data: {

@@ -1,6 +1,6 @@
 {
   "name": "graphql-ts-client",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "GraphQL Typescript Client Generator",
   "author": "Wellington Guimaraes",
   "license": "MIT",
@@ -58,6 +58,7 @@
   ],
   "dependencies": {
     "axios": "^0.24.0",
+    "axios-retry": "^3.2.4",
     "case": "^1.6.3",
     "esbuild": "^0.13.14",
     "graphql": "^15.6.0",
