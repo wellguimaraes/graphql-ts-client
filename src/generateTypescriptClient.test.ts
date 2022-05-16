@@ -28,9 +28,10 @@ describe('Generated Client', () => {
   afterAll(async () => await testServer.server.stop())
 
   it('should be able to make queries with optional args, not passing args obj', async () => {
+    let x= Math.random()
     // noinspection TypeScriptValidateJSTypes
     const books = await client.queries.booksWithOptionalParams({
-      title: true,
+      title: x > .5 ? true : undefined,
       author: true,
     })
 

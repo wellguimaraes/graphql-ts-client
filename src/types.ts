@@ -1,4 +1,5 @@
 export type Maybe<T> = null | undefined | T
+export type Defined<T> = Exclude<T, undefined>
 
 export type IResponseListener = (info: {
   queryName: string
@@ -7,18 +8,21 @@ export type IResponseListener = (info: {
   response?: { data: any; warnings: any; headers: any; status?: number; errors: any }
 }) => void | Promise<void>
 
-export type Projection<S, B, E = unknown> = B extends Array<infer W>
+export type Projection<Selection, Base, E = never> = Base extends Array<infer W>
   ? W extends Date | string | number | boolean | null | undefined | E
     ? W[]
-    : Projection<S, W, E>[]
-  : B extends Date | string | number | boolean | null | undefined | E
-  ? B
+    : Projection<Defined<Selection>, W, E>[]
+  : Base extends Date | string | number | boolean | null | E
+  ? // Is primitive and extends undefined
+    Selection extends undefined
+    ? Base | undefined
+    : Base
   : {
-      [k in keyof S & keyof B]: S[k] extends boolean
-        ? B[k]
-        : B[k] extends Array<infer A>
-        ? Projection<S[k], A, E>[]
-        : Projection<S[k], B[k], E>
+      [k in keyof Selection & keyof Base]: Selection[k] extends boolean
+        ? Base[k]
+        : Base[k] extends Array<infer A>
+        ? Projection<Defined<Selection[k]>, A, E>[]
+        : Projection<Defined<Selection[k]>, Base[k], E>
     }
 
 export type Unpacked<T> = T extends (infer U)[]

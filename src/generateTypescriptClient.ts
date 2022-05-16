@@ -457,9 +457,11 @@ export async function generateTypescriptClient({ output, ...options }: IClientOp
       }
     )
     .catch(() => {
-      console.error('\nThe GraphQL introspection request failed\n')
+      console.error(`The GraphQL introspection request failed (${options.endpoint})`)
       process.exit(1)
     })
+
+  console.log(`Successfully loaded GraphQL introspection from ${options.endpoint}`)
 
   const { js, typings } = generateClientCode(types, options)
 
