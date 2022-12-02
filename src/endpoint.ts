@@ -26,6 +26,7 @@ export const getApiEndpointCreator =
     }> => {
       const alias = (jsonQuery as any)?.__alias ?? queryName
       const shouldRetry = (jsonQuery as any)?.__retry ?? true
+      const requestHeaders = (jsonQuery as any)?.__headers ?? {}
       const { query, variables } = jsonToGraphQLQuery({ kind, queryName, jsonQuery, typesTree: apiConfig.typesTree })
       const start = +new Date()
 
@@ -33,6 +34,7 @@ export const getApiEndpointCreator =
         kind,
         queryName: alias,
         formatGraphQL: apiConfig.formatGraphQL,
+        requestHeaders,
         query,
         variables,
       }
@@ -49,6 +51,7 @@ export const getApiEndpointCreator =
           failureMode,
           queryName: alias,
           client: apiConfig.getClient(),
+          requestHeaders,
           query,
           variables,
         })
