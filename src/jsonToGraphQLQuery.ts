@@ -1,4 +1,4 @@
-import { omit } from 'lodash'
+import omitBy from 'lodash/omitBy'
 
 const VAR_PREFIX = '@@VAR@@'
 const VAR_PREFIX_LENGTH = VAR_PREFIX.length
@@ -20,7 +20,7 @@ export function jsonToGraphQLQuery({
 }) {
   const variablesData = {} as any
   const alias = jsonQuery.__alias
-  const newJsonQuery = cloneDeep(omit(jsonQuery, ['__alias', '__headers']))
+  const newJsonQuery = cloneDeep(omitBy(jsonQuery, (_,key) => key.startsWith('__')))
 
   extractVariables({
     jsonQuery: { [queryName]: newJsonQuery },
