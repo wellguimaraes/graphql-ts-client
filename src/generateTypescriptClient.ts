@@ -99,7 +99,7 @@ function gqlFieldToTypescript(
       })
     )
 
-    fieldTypeDefinition = `{ __headers?: {[key: string]: value}; __retry?: boolean; __alias?: string; __args${
+    fieldTypeDefinition = `{ __headers?: {[key: string]: string}; __retry?: boolean; __alias?: string; __args${
       fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''
     }: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${fieldTypeDefinition ? ` & ${fieldTypeDefinition}` : ''}`
   }
@@ -128,7 +128,7 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
         selection: false,
       })
     )
-    selectionType = `{ __headers?: {[key: string]: value}; __retry?: boolean; __alias?: string; __args${
+    selectionType = `{ __headers?: {[key: string]: string}; __retry?: boolean; __alias?: string; __args${
       fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''
     }: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
   }
