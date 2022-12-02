@@ -12,6 +12,7 @@ export async function graphqlRequest({
   queryName,
   client,
   query,
+  requestHeaders,
   variables,
   failureMode,
 }: {
@@ -21,6 +22,7 @@ export async function graphqlRequest({
   client: ClientConfig
   queryName: string
   query: string
+  requestHeaders: { [_key: string]: any }
   variables: { [_key: string]: any }
 }) {
   let lastResponse: {
@@ -51,6 +53,7 @@ export async function graphqlRequest({
         headers: {
           'Content-Type': 'application/json',
           ...client.headers,
+          ...requestHeaders,
         },
         validateStatus: () => true,
       }
