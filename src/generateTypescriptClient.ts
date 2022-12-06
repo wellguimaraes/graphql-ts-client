@@ -398,7 +398,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     // Enums
     ${enums.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'ts' })).join('\n')}
     
-    type AllEnums = ${enums.map(it => it.name).join(' | ')}
+    type AllEnums = ${enums.length ? enums.map(it => it.name).join(' | ') : 'never'}
 
     // Input/Output Types
     ${objectTypes

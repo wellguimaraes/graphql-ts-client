@@ -16,6 +16,7 @@ describe('GraphQLRequest', () => {
       queryName: 'whatever',
       query: 'whatever',
       variables: {},
+      requestHeaders: {},
       client: {
         url: 'https://whatever.com',
         headers: {},
@@ -46,6 +47,7 @@ describe('GraphQLRequest', () => {
       queryName: 'whatever',
       query: 'whatever',
       variables: {},
+      requestHeaders: {},
       client: {
         url: 'https://whatever.com',
         headers: {},
