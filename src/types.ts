@@ -1,12 +1,15 @@
 export type Maybe<T> = null | undefined | T
 export type Defined<T> = Exclude<T, undefined>
 
-export type IResponseListener = (info: {
+export type ResponseData = { data: any; warnings: any; headers: any; status?: number; errors: { message: string }[] }
+
+export type ResponseListenerInfo = {
   queryName: string
   query: string
   variables: any
-  response?: { data: any; warnings: any; headers: any; status?: number; errors: any }
-}) => void | Promise<void>
+  response: ResponseData
+}
+export type IResponseListener = (info: ResponseListenerInfo) => void | Promise<void>
 
 export type Projection<Selection, Base, E = never> = Base extends Array<infer W>
   ? W extends Date | string | number | boolean | null | undefined | E
@@ -83,15 +86,19 @@ export type LogInfo = {
 }
 
 export class GraphQLClientError extends Error {
-  errors: { message: string }[]
+  responseData: ResponseData
 
-  constructor(errors: { message: string }[]) {
+  constructor(responseData: ResponseData) {
     super()
-    this.errors = errors
+    this.responseData = responseData
     Object.setPrototypeOf(this, GraphQLClientError.prototype)
   }
 
   get message(): string {
-    return this.errors.map(it => it.message).join(';\n')
+    return this.response.errors.map(it => it.message).join(';\n')
+  }
+
+  get response(): ResponseData {
+    return this.responseData
   }
 }

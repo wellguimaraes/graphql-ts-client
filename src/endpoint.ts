@@ -2,7 +2,14 @@ import memoize from 'moize'
 import { graphqlRequest } from './graphqlRequest'
 import { jsonToGraphQLQuery } from './jsonToGraphQLQuery'
 import { logRequest } from './logging'
-import { ClientConfig, Endpoint, IResponseListener, Projection } from './types'
+import {ClientConfig, Endpoint, GraphQLClientError, IResponseListener, Projection, ResponseListenerInfo} from './types'
+
+const executeListeners = (listeners: IResponseListener[], data: ResponseListenerInfo) =>
+  setTimeout(() =>
+    listeners.forEach(runResponseListener =>
+      runResponseListener(data)
+    )
+  )
 
 export const getApiEndpointCreator =
   (apiConfig: {
@@ -39,7 +46,7 @@ export const getApiEndpointCreator =
         variables,
       }
 
-      const responseListener = {
+      const responseListenerData = {
         queryName: alias,
         query: apiConfig.formatGraphQL(query),
         variables,
@@ -66,14 +73,10 @@ export const getApiEndpointCreator =
           })
         }
 
-        setTimeout(() =>
-          apiConfig.responseListeners.forEach(runResponseListener =>
-            runResponseListener({
-              ...responseListener,
-              response,
-            })
-          )
-        )
+        executeListeners(apiConfig.responseListeners,{
+          ...responseListenerData,
+          response,
+        })
 
         return { data: data?.[alias], errors, warnings, headers, status }
       } catch (error) {
@@ -85,7 +88,10 @@ export const getApiEndpointCreator =
           })
         }
 
-        setTimeout(() => apiConfig.responseListeners.forEach(runResponseListener => runResponseListener(responseListener)))
+        executeListeners(apiConfig.responseListeners, {
+          ...responseListenerData,
+          response: (error as GraphQLClientError).response,
+        })
 
         throw error
       }
