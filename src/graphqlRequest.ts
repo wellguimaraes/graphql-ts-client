@@ -1,5 +1,5 @@
 import _axios, { AxiosStatic } from 'axios'
-import { ClientConfig, GraphQLClientError } from './types'
+import {ClientConfig, GraphQLClientError, ResponseData} from './types'
 
 const sleep = (ms = 0) =>
   new Promise<void>(resolve => {
@@ -25,13 +25,7 @@ export async function graphqlRequest({
   requestHeaders: { [_key: string]: any }
   variables: { [_key: string]: any }
 }) {
-  let lastResponse: {
-    data: any
-    errors: { message: string }[]
-    warnings: any[]
-    headers: any
-    status?: number
-  }
+  let lastResponse: ResponseData
 
   const maxRetrials = shouldRetry ? client.retryConfig.max : 0
 
@@ -92,7 +86,7 @@ export async function graphqlRequest({
   }
 
   if (failureMode === 'loud' && lastResponse!.errors && lastResponse!.errors?.length) {
-    throw new GraphQLClientError(lastResponse!.errors)
+    throw new GraphQLClientError(lastResponse)
   }
 
   return lastResponse!
