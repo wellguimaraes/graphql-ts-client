@@ -1,5 +1,5 @@
 import _axios, { AxiosStatic } from 'axios'
-import {ClientConfig, GraphQLClientError, ResponseData} from './types'
+import { ClientConfig, GraphQLClientError, ResponseData } from './types'
 
 const sleep = (ms = 0) =>
   new Promise<void>(resolve => {
@@ -12,7 +12,7 @@ export async function graphqlRequest({
   queryName,
   client,
   query,
-  requestHeaders,
+  requestHeaders = {},
   variables,
   failureMode,
 }: {
@@ -22,7 +22,7 @@ export async function graphqlRequest({
   client: ClientConfig
   queryName: string
   query: string
-  requestHeaders: { [_key: string]: any }
+  requestHeaders?: { [_key: string]: any }
   variables: { [_key: string]: any }
 }) {
   let lastResponse: ResponseData

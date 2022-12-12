@@ -11,6 +11,7 @@ describe('GraphQLRequest', () => {
     } as any
 
     const result = await graphqlRequest({
+
       failureMode: 'loud',
       axios: mockedAxios,
       queryName: 'whatever',
@@ -47,7 +48,6 @@ describe('GraphQLRequest', () => {
       queryName: 'whatever',
       query: 'whatever',
       variables: {},
-      requestHeaders: {},
       client: {
         url: 'https://whatever.com',
         headers: {},

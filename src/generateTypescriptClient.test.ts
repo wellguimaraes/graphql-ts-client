@@ -2,7 +2,7 @@ import { ApolloServer } from 'apollo-server'
 import * as path from 'path'
 import { generateTypescriptClient } from './generateTypescriptClient'
 import { startServer } from './testServer'
-import { GraphQLClientError } from './types'
+import { GraphQLClientError, ResponseListenerInfo } from './types'
 
 let testServer: { server: ApolloServer; url: string }
 let client: any
@@ -15,10 +15,10 @@ describe('Generated Client', () => {
 
     const { js } = await generateTypescriptClient({
       clientName,
-      endpoint: `${testServer.url}/graphql`,
+      endpoint: `${testServer.url}graphql`,
       // For the sake of checking the generated code, we'll
       // specify an output path
-      output: path.resolve(__dirname, './@temp/testClient.ts'),
+      output: path.resolve(__dirname, './__testClient.ts'),
       formatGraphQL: true,
     })
 
@@ -79,4 +79,37 @@ describe('Generated Client', () => {
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0].message).toBe('Failed lorem ipsum dolor')
   })
+
+  it('failing operations throw errors', async () => {
+    let failed = false
+
+    try {
+      await client.queries.failingQuery({
+        __args: {
+          id: 'hello',
+        },
+      })
+    } catch (err) {
+      failed = true
+    }
+
+    expect(failed).toBe(true)
+  })
+
+  it('failing operations throw errors', async () => {
+    let responseData: ResponseListenerInfo | undefined
+    client.addResponseListener((data: any) => (responseData = data))
+
+    try {
+      await client.queries.failingQuery({
+        __args: {
+          id: 'hello',
+        },
+      })
+    } catch {}
+
+    expect(responseData?.queryName).toBe('failingQuery')
+    expect(responseData?.response.errors.length).toBeGreaterThan(0)
+  })
+
 })

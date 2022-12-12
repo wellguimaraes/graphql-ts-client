@@ -3,6 +3,6 @@
 node_modules
 dist
 .idea
-testClient.*
 .cache
-@temp/
+__testClient.d.ts
+__testClient.js

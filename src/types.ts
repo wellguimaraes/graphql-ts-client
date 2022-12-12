@@ -1,7 +1,15 @@
 export type Maybe<T> = null | undefined | T
 export type Defined<T> = Exclude<T, undefined>
 
-export type ResponseData = { data: any; warnings: any; headers: any; status?: number; errors: { message: string }[] }
+export type ResponseData = {
+  data: any
+  warnings: any
+  headers: any
+  status?: number
+  errors: {
+    message: string
+  }[]
+}
 
 export type ResponseListenerInfo = {
   queryName: string
@@ -11,10 +19,12 @@ export type ResponseListenerInfo = {
 }
 export type IResponseListener = (info: ResponseListenerInfo) => void | Promise<void>
 
-export type Projection<Selection, Base, E = never> = Base extends Array<infer W>
-  ? W extends Date | string | number | boolean | null | undefined | E
-    ? W[]
-    : Projection<Defined<Selection>, W, E>[]
+type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends readonly (infer ElementType)[] ? ElementType : never
+
+export type Projection<Selection, Base, E = never> = Base extends Array<any>
+  ? ArrayElement<Base> extends Date | string | number | boolean | null | undefined | E
+    ? ArrayElement<Base>[]
+    : Projection<Defined<Selection>, ArrayElement<Base>, E>[]
   : Base extends Date | string | number | boolean | null | E
   ? // Is primitive and extends undefined
     Selection extends undefined
