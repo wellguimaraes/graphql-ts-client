@@ -14,10 +14,15 @@ import {
   IntrospectionOutputTypeRef,
   IntrospectionType,
 } from 'graphql'
+import { kebabCase } from 'lodash'
 import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
+import md5 from 'md5'
 import path from 'path'
 import * as prettier from 'prettier'
+import os from 'os';
+
+const tempDir = fs.realpathSync(os.tmpdir());
 
 const graphqlTsClientPath = process.env.GQL_CLIENT_DIST_PATH || 'graphql-ts-client/dist'
 
@@ -295,6 +300,14 @@ type IClientOptions = {
 }
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
+  const typesHash = md5(JSON.stringify(types))
+  const clientCacheFileName = `gql-ts-client__client__${typesHash}.json`
+  const clientCacheFilePath = path.resolve(tempDir, clientCacheFileName)
+
+  if (fs.existsSync(clientCacheFilePath)) {
+    return JSON.parse(fs.readFileSync(clientCacheFilePath, { encoding: 'utf8' }))
+  }
+
   const queries = (<IntrospectionObjectType>types.find(it => it.name === 'Query'))?.fields || []
   const mutations = (<IntrospectionObjectType>types.find(it => it.name === 'Mutation'))?.fields || []
   const enums = types.filter(it => it.kind === 'ENUM' && !it.name.startsWith('__')) as IntrospectionEnumType[]
@@ -386,8 +399,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 
   // language=TypeScript
   const typingsCode = `
-    // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols
-    
+    // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols, TypeScriptCheckImport
     import { DeepRequired } from 'ts-essentials'
     import { Maybe, IResponseListener, Endpoint } from '${graphqlTsClientPath}/types'
 
@@ -430,38 +442,63 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
 
     export default ${clientName}`
 
-  return {
+  const output = {
     js: esbuild.transformSync(jsCode, { format: 'cjs', loader: 'js' }).code,
     typings: prettier.format(typingsCode, { semi: false, parser: 'typescript' }),
   }
+
+  fs.writeFileSync(clientCacheFilePath, JSON.stringify(output))
+
+  return output
+}
+
+async function fetchIntrospection({ endpoint, headers }: { endpoint: string; headers?: IClientOptions['headers'] }) {
+  const introspectionCacheFileName = `gql-ts-client__introspection__${kebabCase(endpoint)}.json`
+  const introspectionCacheFilePath = path.resolve(tempDir, introspectionCacheFileName)
+
+  let loadedFromCache = false
+  let types: any
+
+  const { data } = await axios
+    .post(
+      endpoint,
+      { query: getIntrospectionQuery() },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      }
+    )
+    .catch(() => {
+      const errorMessage = `The GraphQL introspection request failed (${endpoint})`
+      if (fs.existsSync(introspectionCacheFilePath)) {
+        const cachedSchema = JSON.parse(fs.readFileSync(introspectionCacheFilePath, { encoding: 'utf8' }))
+        loadedFromCache = true
+        console.warn(`Successfully restored from local cache.`)
+        return { data: cachedSchema }
+      } else {
+        return Promise.reject(errorMessage)
+      }
+    })
+
+  types = data.data.__schema.types
+
+  if (!loadedFromCache) {
+    console.log(`Successfully loaded GraphQL introspection from ${endpoint}`)
+
+    fs.writeFileSync(introspectionCacheFilePath, JSON.stringify(data), {
+      encoding: 'utf8',
+    })
+  }
+
+  return types
 }
 
 export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
   axiosRetry(axios, { retries: 5, retryDelay: retryCount => 1000 * 2 ** retryCount })
 
-  const {
-    data: {
-      data: {
-        __schema: { types },
-      },
-    },
-  } = await axios
-    .post(
-      options.endpoint,
-      { query: getIntrospectionQuery() },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      }
-    )
-    .catch(() => {
-      console.error(`The GraphQL introspection request failed (${options.endpoint})`)
-      process.exit(1)
-    })
-
-  console.log(`Successfully loaded GraphQL introspection from ${options.endpoint}`)
+  const types = await fetchIntrospection(options)
 
   const { js, typings } = generateClientCode(types, options)
 
