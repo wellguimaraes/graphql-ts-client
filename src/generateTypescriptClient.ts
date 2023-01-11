@@ -414,7 +414,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   const typingsCode = `
     // noinspection TypeScriptUnresolvedVariable, ES6UnusedImports, JSUnusedLocalSymbols, TypeScriptCheckImport
     import { DeepRequired } from 'ts-essentials'
-    import { Maybe, IResponseListener, Endpoint } from '${graphqlTsClientPath}/types'
+    import { Maybe, IResponseListener, Endpoint } from '${graphqlTsClientPath}'
 
     // Scalars
     export type IDate = string | Date
@@ -424,7 +424,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     ${enums.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'ts' })).join('\n')}
     
     type AllEnums = ${enums.length ? enums.map(it => it.name).join(' | ') : 'never'}
-
+    
+    // Args
     ${[...queries, ...mutations]
       .map(query => {
         const argsType = getArgsType(query)
@@ -444,7 +445,10 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       .join('\n')}
 
     // Selection Types
-    ${objectTypes.map(it => gqlSchemaToCode(it, { selection: true, outputType: 'ts' })).join('\n')}
+    ${objectTypes
+      .filter(it => it.name !== 'Query')
+      .map(it => gqlSchemaToCode(it, { selection: true, outputType: 'ts' }))
+      .join('\n')}
     
     export declare const ${clientName}: {
       addResponseListener: (listener: IResponseListener) => void
