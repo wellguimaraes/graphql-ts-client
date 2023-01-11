@@ -20,6 +20,7 @@ describe('Generated Client', () => {
       // specify an output path
       output: path.resolve(__dirname, './__testClient.ts'),
       formatGraphQL: true,
+      skipCache: true
     })
 
     client = eval(`${js};${clientName}`)

@@ -18,11 +18,12 @@ import { kebabCase } from 'lodash'
 import orderBy from 'lodash/orderBy'
 import set from 'lodash/set'
 import md5 from 'md5'
+import os from 'os'
 import path from 'path'
 import * as prettier from 'prettier'
-import os from 'os';
+import pkg from '../package.json'
 
-const tempDir = fs.realpathSync(os.tmpdir());
+const tempDir = fs.realpathSync(os.tmpdir())
 
 const graphqlTsClientPath = process.env.GQL_CLIENT_DIST_PATH || 'graphql-ts-client/dist'
 
@@ -119,6 +120,20 @@ function gqlFieldToTypescript(
   }
 }
 
+function getArgsType(endpoint: IntrospectionField) {
+  const fieldsOnArgs = endpoint.args.map(arg =>
+    gqlFieldToTypescript(arg as unknown as IntrospectionField, {
+      defaultValue: arg.defaultValue,
+      isInput: true,
+      selection: false,
+    })
+  )
+  const argsType = `{ ${fieldsOnArgs.map(arg => arg.code).join(', ')} }`
+  const argsFullyOptional = fieldsOnArgs.every(arg => arg.isOptional)
+
+  return { alias: Case.pascal(`${endpoint.name}Args`), type: argsType, optional: argsFullyOptional }
+}
+
 function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionField, codeOutputType: 'ts' | 'js'): string {
   let selectionType = gqlTypeToTypescript(endpoint.type, {
     isInput: false,
@@ -126,16 +141,13 @@ function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionFi
   })
 
   if (endpoint.args && endpoint.args.length) {
-    const fieldsOnArgs = endpoint.args.map(arg =>
-      gqlFieldToTypescript(arg as unknown as IntrospectionField, {
-        defaultValue: arg.defaultValue,
-        isInput: true,
-        selection: false,
-      })
-    )
-    selectionType = `{ __headers?: {[key: string]: string}; __retry?: boolean; __alias?: string; __args${
-      fieldsOnArgs.every(arg => arg.isOptional) ? '?' : ''
-    }: { ${fieldsOnArgs.map(arg => arg.code).join(', ')} }}${selectionType ? ` & ${selectionType}` : ''}`
+    const argsType = getArgsType(endpoint)
+    selectionType = `{ 
+      __headers?: {[key: string]: string}; 
+      __retry?: boolean; 
+      __alias?: string; 
+      __args${argsType.optional ? '?' : ''}: ${argsType.alias}
+    }${selectionType ? ` & ${selectionType}` : ''}`
   }
 
   const outputType = gqlTypeToTypescript(endpoint.type, { required: true })
@@ -297,14 +309,15 @@ type IClientOptions = {
   endpoint: string
   verbose?: boolean
   formatGraphQL?: boolean
+  skipCache?: boolean
 }
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
-  const typesHash = md5(JSON.stringify(types))
-  const clientCacheFileName = `gql-ts-client__client__${typesHash}.json`
+  const typesHash = md5(`${options.endpoint}__${JSON.stringify(types)}`)
+  const clientCacheFileName = `gql-ts-client__client__${typesHash}__${pkg.version}.json`
   const clientCacheFilePath = path.resolve(tempDir, clientCacheFileName)
 
-  if (fs.existsSync(clientCacheFilePath)) {
+  if (!options.skipCache && fs.existsSync(clientCacheFilePath)) {
     return JSON.parse(fs.readFileSync(clientCacheFilePath, { encoding: 'utf8' }))
   }
 
@@ -411,6 +424,13 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     ${enums.map(it => gqlSchemaToCode(it, { selection: false, outputType: 'ts' })).join('\n')}
     
     type AllEnums = ${enums.length ? enums.map(it => it.name).join(' | ') : 'never'}
+
+    ${[...queries, ...mutations]
+      .map(query => {
+        const argsType = getArgsType(query)
+        return `export interface ${argsType.alias} ${argsType.type}`
+      })
+      .join('\n')}
 
     // Input/Output Types
     ${objectTypes
