@@ -20,13 +20,25 @@ describe('Generated Client', () => {
       // specify an output path
       output: path.resolve(__dirname, './__testClient.ts'),
       formatGraphQL: true,
-      skipCache: true
+      skipCache: true,
     })
 
     client = eval(`${js};${clientName}`)
   })
 
   afterAll(async () => await testServer.server.stop())
+
+  it('should be able to pass custom headers to a query without args', async () => {
+    const books = await client.queries.booksWithoutParams({
+      __headers: { 'X-Custom-Header': 'Foo' },
+      title: true,
+      author: true,
+    })
+
+    expect(books).toHaveLength(2)
+    expect(books[0]).toHaveProperty('title')
+    expect(books[0]).toHaveProperty('author')
+  })
 
   it('should be able to make queries with optional args, not passing args obj', async () => {
     // noinspection TypeScriptValidateJSTypes
@@ -112,5 +124,4 @@ describe('Generated Client', () => {
     expect(responseData?.queryName).toBe('failingQuery')
     expect(responseData?.response.errors.length).toBeGreaterThan(0)
   })
-
 })

@@ -28,6 +28,7 @@ const typeDefs = gql`
   }
 
   type Query {
+    booksWithoutParams: [Book]
     booksWithOptionalParams(params: BookSearchParamsAllOptional! = {}): [Book]
     booksWithRequiredParams(params: BookSearchParamsSomeRequired!): [Book]
     failingQuery(id: String!): String
@@ -53,6 +54,7 @@ function filterBooks(params: { title?: string; author?: string }) {
 
 const resolvers = {
   Query: {
+    booksWithoutParams: () => books,
     booksWithOptionalParams: (_: any, { params = {} }: { params: { title?: string; author?: string } }) => filterBooks(params),
     booksWithRequiredParams: (_: any, { params }: { params: { title: string; author?: string } }) => filterBooks(params),
     failingQuery: () => {
@@ -63,7 +65,7 @@ const resolvers = {
 
 const testServer = new ApolloServer({
   typeDefs,
-  resolvers
+  resolvers,
 })
 
 export const startServer = () => testServer.listen(4123).then(({ url }) => ({ url, server: testServer }))
