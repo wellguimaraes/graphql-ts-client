@@ -135,24 +135,21 @@ function getArgsType(endpoint: IntrospectionField) {
 }
 
 function gqlEndpointToCode(kind: 'mutation' | 'query', endpoint: IntrospectionField, codeOutputType: 'ts' | 'js'): string {
-  let selectionType = gqlTypeToTypescript(endpoint.type, {
+  const selectionType = gqlTypeToTypescript(endpoint.type, {
     isInput: false,
     selection: true,
   })
 
-  if (endpoint.args && endpoint.args.length) {
-    const argsType = getArgsType(endpoint)
-    selectionType = `{ 
-      __headers?: {[key: string]: string}; 
-      __retry?: boolean; 
-      __alias?: string; 
-      __args${argsType.optional ? '?' : ''}: ${argsType.alias}
-    }${selectionType ? ` & ${selectionType}` : ''}`
-  }
+  const argsType = endpoint.args && endpoint.args.length ? getArgsType(endpoint) : null
+  const inputType = `{
+    __headers?: {[key: string]: string};
+    __retry?: boolean;
+    __alias?: string;
+    ${argsType ? `__args${argsType.optional ? '?' : ''}: ${argsType.alias}` : ''}
+  }${selectionType ? ` & ${selectionType}` : ''}`
 
   const outputType = gqlTypeToTypescript(endpoint.type, { required: true })
   const wrappedOutputType = /^(string|number|boolean)$/.test(outputType) ? outputType : `DeepRequired<${outputType}>`
-  const inputType = selectionType || 'undefined'
 
   return codeOutputType === 'ts'
     ? `${endpoint.name}: Endpoint<${inputType}, ${wrappedOutputType}, AllEnums>`
