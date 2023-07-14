@@ -303,6 +303,7 @@ type IClientOptions = {
   output?: PathLike
   clientName?: string
   headers?: { [key: string]: string }
+  introspectionEndpoint?: string
   endpoint: string
   verbose?: boolean
   formatGraphQL?: boolean
@@ -473,8 +474,9 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   return output
 }
 
-async function fetchIntrospection({ endpoint, headers }: { endpoint: string; headers?: IClientOptions['headers'] }) {
-  const introspectionCacheFileName = `gql-ts-client__introspection__${kebabCase(endpoint)}.json`
+async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: Omit< IClientOptions, 'output'>) {
+  const url = introspectionEndpoint || endpoint
+  const introspectionCacheFileName = `gql-ts-client__introspection__${kebabCase(url)}.json`
   const introspectionCacheFilePath = path.resolve(tempDir, introspectionCacheFileName)
 
   let loadedFromCache = false
@@ -482,7 +484,7 @@ async function fetchIntrospection({ endpoint, headers }: { endpoint: string; hea
 
   const { data } = await axios
     .post(
-      endpoint,
+      url,
       { query: getIntrospectionQuery() },
       {
         headers: {
@@ -492,7 +494,7 @@ async function fetchIntrospection({ endpoint, headers }: { endpoint: string; hea
       }
     )
     .catch(() => {
-      const errorMessage = `The GraphQL introspection request failed (${endpoint})`
+      const errorMessage = `The GraphQL introspection request failed (${url})`
       if (fs.existsSync(introspectionCacheFilePath)) {
         const cachedSchema = JSON.parse(fs.readFileSync(introspectionCacheFilePath, { encoding: 'utf8' }))
         loadedFromCache = true
@@ -506,7 +508,7 @@ async function fetchIntrospection({ endpoint, headers }: { endpoint: string; hea
   types = data.data.__schema.types
 
   if (!loadedFromCache) {
-    console.log(`Successfully loaded GraphQL introspection from ${endpoint}`)
+    console.log(`Successfully loaded GraphQL introspection from ${url}`)
 
     fs.writeFileSync(introspectionCacheFilePath, JSON.stringify(data), {
       encoding: 'utf8',
