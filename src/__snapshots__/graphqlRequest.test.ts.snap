@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GraphQLRequest Should request have proper structure 1`] = `
+Arguments [
+  "https://whatever.com",
+  {
+    "operationName": "sampleQueryName",
+    "query": "sampleQuery",
+    "variables": {
+      "bar": "foo",
+      "foo": "bar",
+    },
+  },
+  {
+    "headers": {
+      "Content-Type": "application/json",
+    },
+    "params": {
+      "_q": "sampleQueryName",
+    },
+    "validateStatus": [Function],
+  },
+]
+`;
