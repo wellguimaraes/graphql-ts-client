@@ -310,6 +310,8 @@ type IClientOptions = {
   skipCache?: boolean
 }
 
+type FetchIntrospectionOptions = Omit< IClientOptions, 'output' | 'introspectionEndpoint'>
+
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
   const typesHash = md5(`${options.endpoint}__${JSON.stringify(types)}`)
   const clientCacheFileName = `gql-ts-client__client__${typesHash}__${pkg.version}.json`
@@ -474,9 +476,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
   return output
 }
 
-async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: Omit< IClientOptions, 'output'>) {
-  const url = introspectionEndpoint || endpoint
-  const introspectionCacheFileName = `gql-ts-client__introspection__${kebabCase(url)}.json`
+async function fetchIntrospection({ endpoint, headers }: FetchIntrospectionOptions) {
+  const introspectionCacheFileName = `gql-ts-client__introspection__${kebabCase(endpoint)}.json`
   const introspectionCacheFilePath = path.resolve(tempDir, introspectionCacheFileName)
 
   let loadedFromCache = false
@@ -484,7 +485,7 @@ async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: 
 
   const { data } = await axios
     .post(
-      url,
+      endpoint,
       { query: getIntrospectionQuery() },
       {
         headers: {
@@ -494,7 +495,7 @@ async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: 
       }
     )
     .catch(() => {
-      const errorMessage = `The GraphQL introspection request failed (${url})`
+      const errorMessage = `The GraphQL introspection request failed (${endpoint})`
       if (fs.existsSync(introspectionCacheFilePath)) {
         const cachedSchema = JSON.parse(fs.readFileSync(introspectionCacheFilePath, { encoding: 'utf8' }))
         loadedFromCache = true
@@ -508,7 +509,7 @@ async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: 
   types = data.data.__schema.types
 
   if (!loadedFromCache) {
-    console.log(`Successfully loaded GraphQL introspection from ${url}`)
+    console.log(`Successfully loaded GraphQL introspection from ${endpoint}`)
 
     fs.writeFileSync(introspectionCacheFilePath, JSON.stringify(data), {
       encoding: 'utf8',
@@ -518,10 +519,13 @@ async function fetchIntrospection({ endpoint, headers, introspectionEndpoint }: 
   return types
 }
 
-export async function generateTypescriptClient({ output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
+export async function generateTypescriptClient({ introspectionEndpoint,output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
   axiosRetry(axios, { retries: 5, retryDelay: retryCount => 1000 * 2 ** retryCount })
 
-  const types = await fetchIntrospection(options)
+  const types = await fetchIntrospection({
+    ...options,
+    endpoint: introspectionEndpoint || options.endpoint,
+  })
 
   const { js, typings } = generateClientCode(types, options)
 
