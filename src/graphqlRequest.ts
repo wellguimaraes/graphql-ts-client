@@ -41,7 +41,7 @@ export async function graphqlRequest({
       status,
     } = await axios.post(
       client.url,
-      { query, variables },
+      { query, variables, operationName: queryName },
       {
         params: infoParams,
         headers: {
