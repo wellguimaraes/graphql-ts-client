@@ -19,6 +19,7 @@ export const getApiEndpointCreator =
     maxAge: number
     verbose: boolean
     formatGraphQL: any
+    errorsParser?: (errors: any[]) => any
   }) =>
   <I = any, O = any, E = any>(kind: 'mutation' | 'query', queryName: string): Endpoint<I, O, E> => {
     const rawEndpoint: any = async <S extends I>(
@@ -61,6 +62,7 @@ export const getApiEndpointCreator =
           requestHeaders,
           query,
           variables,
+          errorsParser: apiConfig.errorsParser
         })
 
         const response = { data, warnings, headers, status, errors }

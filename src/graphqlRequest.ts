@@ -15,6 +15,7 @@ export async function graphqlRequest({
   requestHeaders = {},
   variables,
   failureMode,
+  errorsParser,
 }: {
   shouldRetry?: boolean
   failureMode: 'loud' | 'silent'
@@ -24,6 +25,7 @@ export async function graphqlRequest({
   query: string
   requestHeaders?: { [_key: string]: any }
   variables: { [_key: string]: any }
+  errorsParser?: (errors: any[]) => any
 }) {
   let lastResponse: ResponseData
 
@@ -60,7 +62,7 @@ export async function graphqlRequest({
     }
 
     lastResponse = {
-      errors,
+      errors: errorsParser ? errorsParser(errors) : errors,
       data,
       warnings,
       headers,
