@@ -62,11 +62,10 @@ export const getApiEndpointCreator =
           requestHeaders,
           query,
           variables,
+          errorsParser: apiConfig.errorsParser
         })
 
-        const parsedErrors = apiConfig.errorsParser ? apiConfig.errorsParser(errors) : errors
-
-        const response = { data, warnings, headers, status, errors: parsedErrors }
+        const response = { data, warnings, headers, status, errors }
 
         if (apiConfig.verbose && globalThis.document) {
           logRequest({
@@ -81,7 +80,7 @@ export const getApiEndpointCreator =
           response,
         })
 
-        return { data: data?.[alias], errors: parsedErrors, warnings, headers, status }
+        return { data: data?.[alias], errors, warnings, headers, status }
       } catch (error) {
         if (apiConfig.verbose && globalThis.document) {
           logRequest({
