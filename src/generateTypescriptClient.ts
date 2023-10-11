@@ -308,12 +308,13 @@ type IClientOptions = {
   verbose?: boolean
   formatGraphQL?: boolean
   skipCache?: boolean
+  errorsParser?: (errors: any[]) => any
 }
 
 type FetchIntrospectionOptions = Omit< IClientOptions, 'output' | 'introspectionEndpoint'>
 
 function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Omit<IClientOptions, 'output'>) {
-  const typesHash = md5(`${options.endpoint}__${JSON.stringify(types)}`)
+  const typesHash = md5(`${JSON.stringify(options)}__${JSON.stringify(types)}`)
   const clientCacheFileName = `gql-ts-client__client__${typesHash}__${pkg.version}.json`
   const clientCacheFilePath = path.resolve(tempDir, clientCacheFileName)
 
@@ -369,6 +370,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       waitBeforeRetry: 0
     }
     let responseListeners = []
+    let errorsParser = ${options.errorsParser}
     // noinspection JSUnusedLocalSymbols
     let apiEndpoint = getApiEndpointCreator({
       getClient: () => ({ url, headers, retryConfig }),
@@ -376,7 +378,8 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
       maxAge: 30000,
       verbose,
       typesTree,
-      formatGraphQL
+      formatGraphQL,
+      errorsParser
     })
 
     export const ${clientName} = {
@@ -519,7 +522,7 @@ async function fetchIntrospection({ endpoint, headers }: FetchIntrospectionOptio
   return types
 }
 
-export async function generateTypescriptClient({ introspectionEndpoint,output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
+export async function generateTypescriptClient({ introspectionEndpoint, output, ...options }: IClientOptions): Promise<{ typings: string; js: string }> {
   axiosRetry(axios, { retries: 5, retryDelay: retryCount => 1000 * 2 ** retryCount })
 
   const types = await fetchIntrospection({
