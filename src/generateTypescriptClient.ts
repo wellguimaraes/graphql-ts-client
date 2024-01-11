@@ -307,6 +307,7 @@ type IClientOptions = {
   endpoint: string
   verbose?: boolean
   formatGraphQL?: boolean
+  moduleFormat? : 'cjs' | 'esm'
   skipCache?: boolean
 }
 
@@ -467,7 +468,7 @@ function generateClientCode(types: ReadonlyArray<IntrospectionType>, options: Om
     export default ${clientName}`
 
   const output = {
-    js: esbuild.transformSync(jsCode, { format: 'cjs', loader: 'js' }).code,
+    js: esbuild.transformSync(jsCode, { format: options.moduleFormat ?? 'cjs', loader: 'js' }).code,
     typings: prettier.format(typingsCode, { semi: false, parser: 'typescript' }),
   }
 
